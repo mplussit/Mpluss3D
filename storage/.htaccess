@@ -1,0 +1,2 @@
+# storage/ skal aldri serveres direkte. Filer leveres bare via public/api.php.
+Require all denied

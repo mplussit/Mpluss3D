@@ -1,0 +1,367 @@
+<?php
+declare(strict_types=1);
+
+/**
+ * Felles grunnlag for oppgave-PDF-ene (brøksirkler, base 10, …).
+ *
+ * Gir samme utseende på alle modellene: topptekst med modellnavn og
+ * sidetall, stor tittel med oransje strek, ingress, bunntekst med
+ * innstillingene, og oppgaveseksjoner med nummererte oppgaver.
+ *
+ * Oppgaver består av «tokens» som brytes over flere linjer ved behov:
+ *   ['text', 'Bygg tallet 24.']   tekst (brytes mellom ord)
+ *   ['box']                       tom svarrute
+ *   ['line']                      svarlinje
+ *   ['tag', 'Papiroppgave']       liten merkelapp
+ *   ['br']                        linjeskift
+ * Underklasser kan legge til egne tokens (f.eks. stablede brøker) ved å
+ * overstyre customTokenWidth(), drawCustomToken() og customLineHeight().
+ *
+ * Alle mål i mm. Sider kan være stående eller liggende A4.
+ */
+abstract class WorksheetPdf
+{
+    protected const M = 18.0;                  // marg
+    protected const INK = [22, 22, 22];
+    protected const INK2 = [93, 90, 85];
+    protected const ACCENT = [163, 63, 14];
+    protected const RULE = [217, 210, 196];
+    protected const SOFT = [243, 239, 231];
+
+    protected LabelPdf $pdf;
+
+    /** Øverst til venstre på hver side, f.eks. «M+ 3D  ·  BRØKSIRKLER». */
+    abstract protected function kicker(): string;
+
+    abstract protected function pageCount(): int;
+
+    /** Bunnteksten (innstillingene), samme på alle sider. */
+    abstract protected function footerText(): string;
+
+    protected function newDocument(string $title): void
+    {
+        $this->pdf = new LabelPdf('P', 'A4');
+        $this->pdf->SetTitle(LabelPdf::enc($title));
+        $this->pdf->SetCreator('M+ 3D');
+    }
+
+    protected function pageW(): float
+    {
+        return round($this->pdf->GetPageWidth(), 1);    // FPDF: A4 = 210,0015 mm
+    }
+
+    protected function pageH(): float
+    {
+        return round($this->pdf->GetPageHeight(), 1);
+    }
+
+    protected function contentW(): float
+    {
+        return $this->pageW() - 2 * self::M;
+    }
+
+    /** Innhold må slutte over bunnteksten (276 mm på stående A4). */
+    protected function bottom(): float
+    {
+        return $this->pageH() - 21.0;
+    }
+
+    /** Ny side med topptekst, tittel og ingress. Returnerer y under ingressen. */
+    protected function header(int $page, string $title, string $lead, string $orientation = 'P'): float
+    {
+        $pdf = $this->pdf;
+        $pdf->AddPage($orientation);
+        $W = $this->contentW();
+        $pdf->SetFont('Helvetica', 'B', 8);
+        $pdf->SetTextColor(...self::ACCENT);
+        $pdf->TextUtf8(self::M, 13, $this->kicker());
+        $pdf->SetFont('Helvetica', '', 8);
+        $pdf->SetTextColor(...self::INK2);
+        $s = LabelPdf::enc("Side $page av " . $this->pageCount());
+        $pdf->Text(self::M + $W - $pdf->GetStringWidth($s), 13, $s);
+
+        $pdf->SetFont('Helvetica', 'B', 22);
+        $pdf->SetTextColor(...self::INK);
+        $pdf->TextUtf8(self::M, 25, $title);
+        $pdf->SetFillColor(243, 109, 33);
+        $pdf->RectExact(self::M, 28.5, 14, 1.2, 'F');
+
+        $pdf->SetFont('Helvetica', '', 10.5);
+        $pdf->SetTextColor(...self::INK2);
+        $pdf->SetXY(self::M - 1, 32);
+        $pdf->MultiCell($W + 2, 5, LabelPdf::enc($lead));
+        return $pdf->GetY() + 6;
+    }
+
+    protected function footer(): void
+    {
+        $pdf = $this->pdf;
+        $pdf->SetFont('Helvetica', '', 6.5);
+        $pdf->SetTextColor(130, 130, 130);
+        $pdf->TextUtf8(self::M, $this->pageH() - 7, $this->footerText() . ' · ' . date('d.m.Y'));
+    }
+
+    /** Overskrift i brødteksten (12 pt). Returnerer y under overskriften. */
+    protected function subheading(float $y, string $text): float
+    {
+        $this->pdf->SetFont('Helvetica', 'B', 12);
+        $this->pdf->SetTextColor(...self::INK);
+        $this->pdf->TextUtf8(self::M, $y, $text);
+        return $y + 2.5;
+    }
+
+    /** Avsnitt med linjebryting. Returnerer y under avsnittet. */
+    protected function paragraph(float $y, string $text, float $size = 9.5, float $lineH = 4.6, ?float $x = null, ?float $w = null): float
+    {
+        $pdf = $this->pdf;
+        $pdf->SetFont('Helvetica', '', $size);
+        $pdf->SetTextColor(...self::INK);
+        // MultiCell har 1 mm indre marg; flytt boksen 1 mm ut så teksten flukter med margen.
+        $pdf->SetXY(($x ?? self::M) - 1, $y);
+        $pdf->MultiCell(($w ?? $this->contentW()) + 2, $lineH, LabelPdf::enc($text));
+        return $pdf->GetY();
+    }
+
+    /** Høyden et avsnitt vil få (uten å tegne det). */
+    protected function paragraphHeight(string $text, float $size, float $lineH, float $w): float
+    {
+        $this->pdf->SetFont('Helvetica', '', $size);
+        $lines = 0;
+        foreach (explode("\n", $text) as $para) {
+            $words = preg_split('/\s+/u', trim($para));
+            $line = '';
+            $n = 1;
+            foreach ($words as $word) {
+                $try = $line === '' ? $word : "$line $word";
+                if ($line !== '' && $this->pdf->GetStringWidth(LabelPdf::enc($try)) > $w - 2) {
+                    $n++;
+                    $line = $word;
+                } else {
+                    $line = $try;
+                }
+            }
+            $lines += $n;
+        }
+        return $lines * $lineH;
+    }
+
+    /* ================================================== Oppgaveseksjoner */
+
+    /**
+     * Tegner seksjoner med nummererte oppgaver. Returnerer y etter siste oppgave.
+     * Oppgaver som ikke får plass, utelates (antallet bør begrenses av den som lager dem).
+     *
+     * @param list<array{title:string,intro:?string,tasks:list<array{tokens:list<array>}>}> $sections
+     */
+    protected function drawSections(array $sections, float $y, int $no = 1): float
+    {
+        $pdf = $this->pdf;
+        $W = $this->contentW();
+        $bottom = $this->bottom();
+        foreach ($sections as $sec) {
+            if (!$sec['tasks']) {
+                continue;
+            }
+            // Overskriften tegnes bare hvis minst den første oppgaven får plass under.
+            $first = $this->wrapTokens($sec['tasks'][0]['tokens'], $W - 9, 11);
+            $headH = 3 + 1.5 + (!empty($sec['intro']) ? 5 : 0) + 3;
+            if ($y + $headH + $this->linesHeight($first) > $bottom) {
+                break;
+            }
+            $y += 3;
+            $pdf->SetFont('Helvetica', 'B', 12.5);
+            $pdf->SetTextColor(...self::INK);
+            $pdf->TextUtf8(self::M, $y, $sec['title']);
+            $y += 1.5;
+            if (!empty($sec['intro'])) {
+                $pdf->SetFont('Helvetica', '', 9.5);
+                $pdf->SetTextColor(...self::INK2);
+                $pdf->TextRich(self::M, $y + 4, $sec['intro']);   // også π, √ og ≈
+                $y += 5;
+            }
+            $y += 3;
+            foreach ($sec['tasks'] as $task) {
+                $lines = $this->wrapTokens($task['tokens'], $W - 9, 11);
+                if ($y + $this->linesHeight($lines) > $bottom) {
+                    break 2;
+                }
+                $pdf->SetFont('Helvetica', 'B', 11);
+                $pdf->SetTextColor(...self::ACCENT);
+                $pdf->TextUtf8(self::M, $y + $this->lineHeight($lines[0]) / 2 + 1.4, $no . '.');
+                foreach ($lines as $line) {
+                    $lh = $this->lineHeight($line);
+                    $this->drawTokens($line, self::M + 9, $y + $lh / 2, 11);
+                    $y += $lh;
+                }
+                $no++;
+            }
+            $y += 2;
+        }
+        return $y;
+    }
+
+    /** Høyden en seksjonsliste vil få, uten å tegne den. */
+    protected function sectionsHeight(array $sections): float
+    {
+        $W = $this->contentW();
+        $h = 0.0;
+        foreach ($sections as $sec) {
+            if (!$sec['tasks']) {
+                continue;
+            }
+            $h += 3 + 1.5 + (!empty($sec['intro']) ? 5 : 0) + 3 + 2;
+            foreach ($sec['tasks'] as $task) {
+                $h += $this->linesHeight($this->wrapTokens($task['tokens'], $W - 9, 11));
+            }
+        }
+        return $h;
+    }
+
+    protected function lineHeight(array $line): float
+    {
+        $types = array_column($line, 0);
+        $custom = $this->customLineHeight($types);
+        if ($custom !== null) {
+            return $custom;
+        }
+        return in_array('box', $types, true) ? 9.5 : 7.0;
+    }
+
+    protected function linesHeight(array $lines): float
+    {
+        return array_sum(array_map(fn($l) => $this->lineHeight($l), $lines));
+    }
+
+    protected function capH(float $size): float
+    {
+        return $size * 0.3528 * 0.72;
+    }
+
+    /* ---------------------------------------------- Kroker for egne tokens */
+
+    /** @param list<string> $types tokentypene på linja */
+    protected function customLineHeight(array $types): ?float
+    {
+        return null;
+    }
+
+    protected function customTokenWidth(array $t, float $size): ?float
+    {
+        return null;
+    }
+
+    /** Returnerer true hvis tokenet ble tegnet. */
+    protected function drawCustomToken(array $t, float $x, float $yMid, float $size): bool
+    {
+        return false;
+    }
+
+    /* ----------------------------------------------------------- Tokens */
+
+    protected function tokenWidth(array $t, float $size): float
+    {
+        $custom = $this->customTokenWidth($t, $size);
+        if ($custom !== null) {
+            return $custom;
+        }
+        $pdf = $this->pdf;
+        switch ($t[0]) {
+            case 'text':
+                $pdf->SetFont('Helvetica', '', $size);
+                return $pdf->GetStringWidth(LabelPdf::enc($t[1]));
+            case 'tag':
+                $pdf->SetFont('Helvetica', 'B', 7);
+                return $pdf->GetStringWidth(LabelPdf::enc($t[1])) + 6;
+            case 'box':
+                return 9.0;
+            case 'line':
+                return 30.0;
+            default:
+                return 0.0;
+        }
+    }
+
+    protected function tokensWidth(array $tokens, float $size): float
+    {
+        $w = 0.0;
+        foreach ($tokens as $t) {
+            $w += $this->tokenWidth($t, $size);
+        }
+        return $w;
+    }
+
+    /** Bryter tokens i linjer som får plass i $maxW. Tekst brytes mellom ord. */
+    protected function wrapTokens(array $tokens, float $maxW, float $size): array
+    {
+        $atoms = [];
+        foreach ($tokens as $t) {
+            if ($t[0] === 'text') {
+                foreach (preg_split('/(?<= )/u', $t[1]) as $word) {
+                    if ($word !== '') {
+                        $atoms[] = ['text', $word];
+                    }
+                }
+            } else {
+                $atoms[] = $t;
+            }
+        }
+        $lines = [[]];
+        $w = 0.0;
+        foreach ($atoms as $a) {
+            if ($a[0] === 'br') {            // tvunget linjeskift
+                $lines[] = [];
+                $w = 0.0;
+                continue;
+            }
+            $aw = $this->tokenWidth($a, $size);
+            if ($w + $aw > $maxW && $lines[count($lines) - 1]) {
+                $lines[] = [];
+                $w = 0.0;
+                if ($a[0] === 'text') {
+                    $a[1] = ltrim($a[1]);
+                    $aw = $this->tokenWidth($a, $size);
+                }
+            }
+            $lines[count($lines) - 1][] = $a;
+            $w += $aw;
+        }
+        return $lines;
+    }
+
+    protected function drawTokens(array $tokens, float $x, float $yMid, float $size): void
+    {
+        $pdf = $this->pdf;
+        foreach ($tokens as $t) {
+            if (!$this->drawCustomToken($t, $x, $yMid, $size)) {
+                switch ($t[0]) {
+                    case 'text':
+                        $pdf->SetFont('Helvetica', '', $size);
+                        $pdf->SetTextColor(...self::INK);
+                        $pdf->TextUtf8($x, $yMid + $this->capH($size) / 2, $t[1]);
+                        break;
+                    case 'tag':
+                        $w = $this->tokenWidth($t, $size) - 2;
+                        $pdf->SetFillColor(255, 243, 205);
+                        $pdf->SetDrawColor(230, 180, 60);
+                        $pdf->SetLineWidth(0.2);
+                        $pdf->RectExact($x, $yMid - 2.4, $w, 4.8, 'FD');
+                        $pdf->SetFont('Helvetica', 'B', 7);
+                        $pdf->SetTextColor(...self::INK);
+                        $pdf->TextUtf8($x + 2, $yMid + 0.9, $t[1]);
+                        break;
+                    case 'box':
+                        $pdf->SetDrawColor(...self::INK);
+                        $pdf->SetLineWidth(0.25);
+                        $pdf->RectExact($x + 0.5, $yMid - 3.6, 8, 7.2, 'D');
+                        break;
+                    case 'line':
+                        $pdf->SetDrawColor(...self::INK2);
+                        $pdf->SetLineWidth(0.25);
+                        $pdf->LineExact($x + 1, $yMid + $this->capH($size) / 2 + 0.8, $x + 29, $yMid + $this->capH($size) / 2 + 0.8);
+                        break;
+                }
+            }
+            $x += $this->tokenWidth($t, $size);
+        }
+    }
+}

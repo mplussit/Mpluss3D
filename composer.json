@@ -1,0 +1,26 @@
+{
+    "name": "mplus/mplus-3d",
+    "description": "M+ 3D – parametriske matematiske konkreter (terning, brøksirkler, base 10, tallstaver, romfigurer) med OpenSCAD, STL og PDF",
+    "type": "project",
+    "license": "proprietary",
+    "require": {
+        "php": ">=8.1",
+        "ext-json": "*",
+        "ext-mbstring": "*",
+        "ext-iconv": "*",
+        "setasign/fpdf": "^1.8.6"
+    },
+    "suggest": {
+        "ext-zip": "Trengs for ZIP-nedlasting av alle STL-filene (brøksirkler, base 10 og tallstaver)"
+    },
+    "autoload": {
+        "classmap": ["app/services/"]
+    },
+    "scripts": {
+        "test": "php tests/run.php",
+        "serve": "php -S 127.0.0.1:8080 -t public"
+    },
+    "config": {
+        "sort-packages": true
+    }
+}

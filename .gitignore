@@ -1,0 +1,8 @@
+/vendor/
+/storage/generated/*
+/storage/cache/
+/storage/locks/
+/storage/logs/
+/storage/openscad-capabilities.json
+.DS_Store
+Thumbs.db
