@@ -1,0 +1,55 @@
+# M+ 3D som Docker Swarm-stakk. Brukes av docker/deploy.sh:
+#
+#   docker/deploy.sh prod   → stakken mplus3d      på port 8085 (3d.mpluss.no)
+#   docker/deploy.sh test   → stakken mplus3d-test på port 8086 (3dtest.mpluss.no)
+#
+# HAProxy på serveren sender trafikken for domenet til porten. Koden monteres inn
+# fra denne mappen, så «git pull» oppdaterer appen uten ny utrulling.
+
+version: '3.8'
+
+services:
+  nginx:
+    image: nginx:1.25.3
+    ports:
+      - target: 80
+        published: ${MPLUS3D_PORT:-8085}
+        protocol: tcp
+        mode: ingress
+    volumes:
+      - ./:/var/www/mplus3d:ro
+      - ./docker/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    deploy:
+      mode: replicated
+      replicas: 1
+
+  php-fpm:
+    image: mplus3d/php-fpm:1
+    volumes:
+      - ./:/var/www/mplus3d
+    environment:
+      # M+-adressene som kan stå i ?tilbake= (se mplus_return_hosts i app/config/config.php)
+      MPLUS_RETURN_HOSTS: ${MPLUS_RETURN_HOSTS:-app.mpluss.no}
+    deploy:
+      mode: replicated
+      replicas: 1
+      # Tak, så OpenSCAD aldri tar ressurser fra M+ på samme server.
+      resources:
+        limits:
+          cpus: '4'
+          memory: 4G
+
+  # Sletter genererte filer som er eldre enn en time (bin/cleanup.php), hvert kvarter.
+  cleanup:
+    image: mplus3d/php-fpm:1
+    user: www-data
+    command: ["sh", "-c", "while true; do php bin/cleanup.php; sleep 900; done"]
+    volumes:
+      - ./:/var/www/mplus3d
+    deploy:
+      mode: replicated
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 128M

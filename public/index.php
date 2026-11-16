@@ -27,6 +27,23 @@ if ($slug !== null && $page === null) {
 $e = static fn(string $s): string => htmlspecialchars($s, ENT_QUOTES, 'UTF-8');
 $templates = __DIR__ . '/../templates/pages';
 $title = $page ? $page['title'] : 'Velg modell';
+
+// Åpnet fra menyen i M+? Da peker logoen og menylenken tilbake til M+.
+// Bare http(s)-adresser på kjente M+-verter godtas (se mplus_return_hosts).
+$mplusBack = null;
+$back = $_GET['tilbake'] ?? null;
+if ($page && is_string($back) && strlen($back) <= 500) {
+    $parts = parse_url($back);
+    $hosts = (require __DIR__ . '/../app/config/config.php')['mplus_return_hosts'];
+    if (is_array($parts)
+        && in_array(strtolower($parts['scheme'] ?? ''), ['http', 'https'], true)
+        && in_array(strtolower($parts['host'] ?? ''), $hosts, true)
+        && !isset($parts['user']) && !isset($parts['pass'])) {
+        $mplusBack = $back;
+    }
+}
+$menuHref = $mplusBack ?? './';
+$menuTitle = $mplusBack ? 'Til menyen i M+' : 'Til menyen';
 ?>
 <!doctype html>
 <html lang="nb">
@@ -51,18 +68,18 @@ $title = $page ? $page['title'] : 'Velg modell';
 </head>
 <body data-page="<?= $e($page ? (string) $slug : 'meny') ?>">
 <header class="topbar">
-    <a class="logo-tile" href="./" title="Til menyen">
+    <a class="logo-tile" href="<?= $e($menuHref) ?>" title="<?= $e($menuTitle) ?>">
         <img src="assets/mplus-logo.svg" alt="M+" width="86" height="64">
     </a>
     <div class="brand">M+ <span class="brand-3d">3D</span></div>
     <span class="topbar-rule" aria-hidden="true"></span>
     <h1><?= $e($page ? $page['h1'] : 'Velg modell') ?></h1>
     <nav class="model-nav" aria-label="Sider">
-        <a href="./" class="nav-menu"<?= $page ? '' : ' aria-current="page"' ?>>
+        <a href="<?= $e($menuHref) ?>" class="nav-menu"<?= $page ? '' : ' aria-current="page"' ?>>
             <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 2h5v5H2zM9 2h5v5H9zM2 9h5v5H2zM9 9h5v5H9z" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
-            Meny
+            <?= $mplusBack ? 'Meny i M+' : 'Meny' ?>
         </a>
-<?php foreach ($site['pages'] as $s => $p): ?>
+<?php foreach ($mplusBack ? [] : $site['pages'] as $s => $p): ?>
         <a href="?side=<?= $e($s) ?>"<?= $s === $slug ? ' aria-current="page"' : '' ?>><?= $e($p['title']) ?></a>
 <?php endforeach; ?>
     </nav>

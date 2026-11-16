@@ -156,6 +156,16 @@ Startsiden (`public/index.php` uten parameter) er en meny som fungerer som menye
 
 Sidene, gruppene og temaene står i `app/config/pages.php`. Forhåndsbildene (`public/assets/previews/`) er skjermbilder av 3D-visningen.
 
+### I menyen til M+
+
+M+ 3D er også et produkt i produktvelgeren i M+ (fag `3d`, fra `menu__24.js` i M+-repoet):
+
+* Sidene står i `o_pages` med `subject = "3d"`. `page` er det samme som `side` her (for eksempel `terning`), og tittel og beskrivelse er UI-teksten `<page>3d`. Radene og tekstene ligger i `docs/mpluss3d-o_pages.sql` i M+-repoet.
+* Når man åpner en side, sender M+ brukeren til `index.php?side=<page>&tilbake=<adressen til M+-menyen>`. Logoen og «Meny i M+» fører da tilbake dit, og lenkene til de andre modellene skjules.
+* `tilbake` godtas bare for http(s)-adresser på vertene i `mplus_return_hosts` i `app/config/config.php` (eller i miljøvariabelen `MPLUS_RETURN_HOSTS`).
+* Forhåndsbildene i M+ er WebP 900 × 670 i `www/media/task_previews/{nbNO,nnNO}/<page>.webp`, laget av bildene her.
+* En ny modell må derfor legges inn både i `pages.php` og som rad og tekst i M+.
+
 ## Serveravhengigheter
 
 | Avhengighet | Versjon | Merknad |
@@ -942,6 +952,23 @@ Romfigurer:
 - [ ] Gå gjennom oppgave-PDF-en på alle tre nivåer for én figur, sammen med 3D-modellen og papirfiguren.
 
 ## Drift på server
+
+### Docker på M+-serveren
+
+M+ 3D kjører som to Docker Swarm-stakker på samme server som M+. HAProxy sender domenet til porten:
+
+| Domene | Stakk | Port | Tilbake-lenker godtas fra |
+|---|---|---|---|
+| `3d.mpluss.no` | `mplus3d` | 8085 | `app.mpluss.no` |
+| `3dtest.mpluss.no` | `mplus3d-test` | 8086 | `apptest.mpluss.no`, `test.mpluss.no` |
+
+* `docker/Dockerfile` lager bildet `mplus3d/php-fpm:1`: PHP 8.2-FPM med `gd` og `zip`, Composer og OpenSCAD (AppImage, låst versjon kontrollert mot SHA256, Manifold).
+* `docker-compose.yml` har nginx, php-fpm (maks 4 CPU og 4 GB) og `cleanup`, som kjører `bin/cleanup.php` hvert kvarter. Koden monteres inn fra git-klonen, så `git pull` oppdaterer appen direkte.
+* Hvert miljø har sin egen klone på serveren, for eksempel `~/mplus3d` (greinen `main`) og `~/mplus3d-test` (greinen `test`). Oppdatering: `docker/deploy.sh prod` eller `docker/deploy.sh test` fra klonen. Skriptet kjører `git pull`, bygger bildet hvis det mangler, installerer avhengigheter, gir PHP skrivetilgang til `storage/` og ruller ut stakken.
+* Ny OpenSCAD-versjon: endre `OPENSCAD_VERSION` og `OPENSCAD_SHA256` i `docker/Dockerfile`, øk taggen (`:2`) der og i `docker-compose.yml` og `deploy.sh`, og kjør `deploy.sh` på nytt.
+* Teste lokalt: `MPLUS3D_PORT=8095 MPLUS_RETURN_HOSTS=localhost docker compose -p mplus3d-local up -d` (etter `docker build -t mplus3d/php-fpm:1 docker`), og åpne <http://127.0.0.1:8095>. Stopp med `docker compose -p mplus3d-local down`.
+
+### Generelt
 
 * Webroten skal være `public/`. `app/`, `models/`, `storage/` og `vendor/` skal ikke kunne nås fra nett. `storage/.htaccess` stopper dette på Apache som en ekstra sikring.
 * Webserveren må kunne skrive til `storage/`.

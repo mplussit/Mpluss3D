@@ -41,4 +41,12 @@ return [
 
     // Hvor lenge genererte filer beholdes (sekunder).
     'generated_ttl' => 3600,
+
+    // Når en side åpnes fra menyen i M+ (index.php?side=…&tilbake=<url>), fører logoen
+    // og menylenken tilbake dit. Bare adresser på disse vertene godtas, så parameteren
+    // ikke kan brukes til å sende folk videre til andre nettsteder.
+    // Kan overstyres med MPLUS_RETURN_HOSTS (kommaseparert).
+    'mplus_return_hosts' => getenv('MPLUS_RETURN_HOSTS') !== false
+        ? array_values(array_filter(array_map('trim', explode(',', (string) getenv('MPLUS_RETURN_HOSTS')))))
+        : ['app.mpluss.no', 'apptest.mpluss.no', 'test.mpluss.no', 'localhost', '127.0.0.1'],
 ];
