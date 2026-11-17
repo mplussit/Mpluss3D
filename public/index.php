@@ -16,7 +16,7 @@
 declare(strict_types=1);
 
 header('X-Content-Type-Options: nosniff');
-$v = '10';   // øk for å tvinge ny CSS/JS i nettleseren
+$v = '11';   // øk for å tvinge ny CSS/JS i nettleseren
 
 $site = require __DIR__ . '/../app/config/pages.php';
 $slug = $_GET['side'] ?? null;
@@ -68,6 +68,8 @@ $menuTitle = $mplusBack ? 'Til menyen i M+' : 'Til menyen';
 <?php endif; ?>
 </head>
 <body data-page="<?= $e($page ? (string) $slug : 'meny') ?>">
+<div id="app-frame" class="app-frame">
+<script src="js/appscale.js?v=<?= $v ?>"></script>
 <header class="topbar">
     <a class="logo-tile" href="<?= $e($menuHref) ?>" title="<?= $e($menuTitle) ?>">
         <img src="assets/mplus-logo.svg" alt="M+" width="86" height="64">
@@ -97,6 +99,7 @@ if ($page) {
     require $templates . '/menu.php';
 }
 ?>
+</div>
 
 <?php if ($page): ?>
 <script type="module" src="<?= $e($page['script']) ?>?v=<?= $v ?>"></script>

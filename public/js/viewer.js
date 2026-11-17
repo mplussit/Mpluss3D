@@ -31,7 +31,7 @@ export class ModelViewer {
         this.fitFactor = 1.45;
 
         this.renderer = new THREE.WebGLRenderer({ antialias: true });
-        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        this.renderer.setPixelRatio(ModelViewer.pixelRatio());
         this.renderer.shadowMap.enabled = true;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         container.appendChild(this.renderer.domElement);
@@ -56,8 +56,20 @@ export class ModelViewer {
         this.addGround();
 
         new ResizeObserver(() => this.resize()).observe(container);
+        // Når appflaten forstørres (js/appscale.js), endres ikke størrelsen i CSS-piksler,
+        // men bildet må tegnes med flere piksler for å bli skarpt.
+        window.addEventListener('m3d-scale', () => {
+            this.renderer.setPixelRatio(ModelViewer.pixelRatio());
+            this.resize();
+        });
         this.resize();
         this.renderer.setAnimationLoop(() => this.tick());
+    }
+
+    /** Pikseltetthet: skjermens, ganger forstørrelsen av appflaten, høyst 3. */
+    static pixelRatio() {
+        const zoom = window.m3dScale ? window.m3dScale.get() : 1;
+        return Math.min(window.devicePixelRatio * zoom, 3);
     }
 
     addLights() {

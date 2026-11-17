@@ -167,6 +167,15 @@ Startsiden (`public/index.php` uten parameter) er en meny som fungerer som menye
 
 Sidene, gruppene og temaene står i `app/config/pages.php`. Forhåndsbildene (`public/assets/previews/`) er skjermbilder av 3D-visningen.
 
+### Fast appflate (samme størrelse som M+)
+
+M+ har en fast flate på 840 × 640 som forstørres jevnt til vinduet (skala 1–2) og midtstilles vannrett. M+ 3D bruker nøyaktig samme rektangel (`public/js/appscale.js`), så appen har samme høyde og bredde når man går mellom M+ og en 3D-side.
+
+* Innholdet er laget for en flate på 1120 × 853 (samme proporsjoner) og forstørres med CSS `zoom`.
+* Panelet og innholdet under 3D-visningen ruller inne i flaten, og vinduet selv ruller ikke.
+* 3D-visningen tegnes med pikseltetthet × forstørrelse, så den er skarp også når flaten er forstørret.
+* Vinduer smalere enn 840 px (mobil) får den vanlige, responsive siden.
+
 ### I menyen til M+
 
 M+ 3D er også et produkt i produktvelgeren i M+ (fag `3d`, fra `menu__24.js` i M+-repoet):

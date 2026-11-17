@@ -796,6 +796,41 @@ p { margin: 0; }
 #copies-box { margin-top: 10px; }
 #copies-box .type-count > span { font-size: 15px; }
 
+/* ------------------------------------------------------------ Fast appflate (som i M+)
+   js/appscale.js setter .app-fixed på <html> når vinduet er minst 840 px bredt,
+   og forstørrer #app-frame (1120 × 853) med zoom inn i samme rektangel som
+   M+-appen. Innholdet ruller inne i flaten. Smalere vinduer er responsive. */
+.app-frame { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.app-fixed, .app-fixed body { height: 100%; }
+.app-fixed body { min-height: 0; align-items: center; background: var(--bg); }
+.app-fixed .app-frame {
+    flex: none;
+    width: var(--app-w);
+    height: var(--app-h);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+.app-fixed .topbar { flex: none; flex-wrap: wrap; padding: 0 22px; gap: 12px; min-height: 70px; }
+.app-fixed .topbar h1 { font-size: 19px; }
+.app-fixed .model-nav { order: 6; flex-basis: 100%; margin: -8px 0 4px; }
+.app-fixed .model-nav a { min-height: 34px; font-size: 14px; padding: 0 10px; }
+.app-fixed .help-link { margin-left: auto; }
+.app-fixed .layout, .app-fixed .menu-layout {
+    flex: 1 1 auto;
+    min-height: 0;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    gap: 18px;
+    padding: 8px 22px 18px;
+}
+.app-fixed .viewer-wrap, .app-fixed .menu-preview { overflow-y: auto; min-height: 0; padding: 0 4px 6px 0; }
+.app-fixed .viewer-wrap > *, .app-fixed .menu-preview > * { flex-shrink: 0; }
+.app-fixed .panel, .app-fixed .menu-panel { overflow-y: auto; min-height: 0; flex: 0 0 340px; max-width: 340px; }
+.app-fixed .viewer, .app-fixed .solid-net { height: 500px; min-height: 0; }
+.app-fixed .solid-views[data-show="both"] { grid-template-columns: 1fr 1fr; }
+.app-fixed .solid-views[data-show="both"] .viewer, .app-fixed .solid-views[data-show="both"] .solid-net { height: 500px; }
+
 /* ------------------------------------------------------------ Smale skjermer */
 @media (max-width: 1180px) {
     .topbar { flex-wrap: wrap; }
