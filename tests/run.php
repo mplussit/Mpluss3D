@@ -488,8 +488,9 @@ echo "\nModellregister og API\n";
 
 $registry = new ModelRegistry(__DIR__ . '/../app/config');
 
-test('registeret har terning, brøksirkler, base 10, tallstaver og romfigurer', function () use ($registry) {
-    eq(['dice', 'fractions', 'base10', 'rods', 'solids'], $registry->keys());
+test('registeret har terning, brøksirkler, base 10, tallstaver, romfigurer og Regn med Lego', function () use ($registry) {
+    eq(['dice', 'fractions', 'base10', 'rods', 'solids', 'lego'], $registry->keys());
+    ok($registry->get('lego') instanceof LegoModel);
     ok($registry->get('solids') instanceof SolidModel);
     ok($registry->get('base10') instanceof Base10Model);
     ok($registry->get('rods') instanceof RodModel);
@@ -1747,6 +1748,7 @@ test('PDF: sidene, tegneoppgaver bare når settet mangler staver, arbeidsark i f
 });
 
 require __DIR__ . '/solids.php';
+require __DIR__ . '/lego.php';
 
 // Rydd opp
 $it = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($tmp, FilesystemIterator::SKIP_DOTS), RecursiveIteratorIterator::CHILD_FIRST);

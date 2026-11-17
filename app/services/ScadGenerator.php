@@ -9,7 +9,8 @@ declare(strict_types=1);
  *    sende egen OpenSCAD-kode.
  *  - Prosessen startes med proc_open() og en argumentliste (ingen shell),
  *    så ingen verdier tolkes av et kommandoskall.
- *  - -D-variabler har validerte navn og er alltid tall.
+ *  - -D-variabler har validerte navn og er alltid tall eller flate lister
+ *    med tall (tekst sendes som tegnkoder og gjøres om med chr() i SCAD).
  *  - Kjøretiden er begrenset, og antall samtidige prosesser styres av
  *    ProcessSlots.
  */
@@ -65,7 +66,7 @@ final class ScadGenerator
      * Rendrer en modell til STL.
      *
      * @param string $scadFile relativ sti under models/, f.eks. "dice/cube.scad"
-     * @param array<string,int|float> $variables
+     * @param array<string,int|float|list<int|float>> $variables
      * @return array{seconds:float,log:string}
      * @throws GenerationException
      */
@@ -176,11 +177,27 @@ final class ScadGenerator
         return $path;
     }
 
+    /**
+     * Et tall, eller en flat liste med tall (f.eks. rutene i en form eller
+     * tegnkodene til en tekst). Bare tall slipper gjennom: ingen strenger og
+     * ingen OpenSCAD-kode fra brukeren.
+     */
     private static function formatNumber(string $name, mixed $value): string
     {
         if (!preg_match('/^[a-z_][a-z0-9_]{0,40}$/', $name)) {
             throw new GenerationException('Intern feil ved filgenerering.', "Ugyldig variabelnavn: $name");
         }
+        if (is_array($value)) {
+            if (!array_is_list($value) || count($value) > 4000) {
+                throw new GenerationException('Intern feil ved filgenerering.', "Variabelen $name er ikke en gyldig liste.");
+            }
+            return '[' . implode(',', array_map(fn($v) => self::scalar($name, $v), $value)) . ']';
+        }
+        return self::scalar($name, $value);
+    }
+
+    private static function scalar(string $name, mixed $value): string
+    {
         if (is_int($value)) {
             return (string) $value;
         }

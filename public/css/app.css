@@ -678,6 +678,124 @@ p { margin: 0; }
 .props-table th, .props-table td { text-align: left; padding: 5px 8px 5px 0; border-bottom: 1px solid var(--line-soft); vertical-align: top; }
 .props-table th { font-weight: 600; }
 
+/* ------------------------------------------------------------ Regn med Lego */
+.lego-card {
+    margin-top: 16px;
+    padding: 18px 22px;
+    background: var(--paper);
+    border-radius: var(--radius-paper);
+    box-shadow: var(--shadow-paper);
+}
+.lego-card-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+.lego-card-head .panel-heading { margin: 0; }
+.lego-frame-tools { display: flex; gap: 8px; flex-wrap: wrap; }
+.lego-frame-tools .btn-small { padding: 0 16px; }
+
+.frame-strip { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.frame-card {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 4px;
+    min-width: 84px;
+    min-height: 96px;
+    padding: 8px 10px;
+    background: var(--paper);
+    color: var(--ink);
+    border: 1.5px solid var(--line);
+    border-radius: var(--radius-ctl);
+    font: 600 13px var(--font-body);
+    cursor: pointer;
+}
+.frame-card svg rect { fill: var(--orange); stroke: var(--paper); stroke-width: 0.6; }
+.frame-card:hover { border-color: var(--ink); }
+.frame-card.selected { border-color: var(--ink); box-shadow: inset 0 -3px 0 var(--orange); }
+.frame-card.invalid { border-color: var(--error); }
+.frame-card.invalid .frame-name { color: var(--error); }
+.frame-count { font-size: 18px; font-weight: 800; }
+.op-select {
+    min-height: var(--tap);
+    padding: 0 6px;
+    background: var(--paper);
+    color: var(--ink);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-ctl);
+    font: 800 20px var(--font-display);
+    cursor: pointer;
+}
+.equation { margin-top: 12px; font-size: 18px; font-weight: 700; }
+
+.capacity { margin: 0 0 12px; font-size: 26px; font-weight: 800; }
+.panel-frame { margin: 0 0 12px; font: 700 15px var(--font-display); }
+
+.size-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+.size-row .type-count > span { font-size: 14px; color: var(--ink-2); }
+.size-x { font-weight: 700; color: var(--ink-2); }
+#make-rect { margin-bottom: 12px; }
+
+.lego-grid {
+    display: grid;
+    grid-template-columns: repeat(var(--cols, 4), 1fr);
+    gap: 2px;
+    max-width: min(100%, calc(var(--cols, 4) * 40px + 12px));
+    padding: 6px;
+    background: var(--bg);
+    border-radius: var(--radius-paper);
+    touch-action: none;
+    user-select: none;
+}
+.lego-grid .cell {
+    aspect-ratio: 1;
+    min-width: 0;
+    padding: 0;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 2px;
+    cursor: pointer;
+}
+.lego-grid .cell.on {
+    background: var(--orange) radial-gradient(circle at 50% 50%, rgba(255, 255, 255, .45) 0 28%, transparent 30%);
+    border-color: var(--orange-ink);
+}
+.lego-grid .cell:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+.field-hint { margin-top: 6px; font-size: 14px; color: var(--ink-2); }
+.cell-count { margin-top: 4px; font-size: 17px; font-weight: 800; }
+.field[data-field="cells"].invalid .lego-grid { outline: 2px solid var(--error); }
+
+.mm-field .input-row input {
+    width: 92px;
+    min-height: var(--tap);
+    padding: 0 10px;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-ctl);
+    font: 700 16px var(--font-display);
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+    text-align: right;
+}
+.mm-field.invalid .input-row input { border-color: var(--error); }
+.mm-field .range { font-size: 13px; }
+.mm-field .field-help { margin-top: 4px; }
+.mm-field[hidden], #field-settings[hidden], #text-box[hidden], #style-box[hidden], #copies-box[hidden], #mm-bottom[hidden] { display: none; }
+#field-settings .control-label { display: block; margin: 10px 0 6px; }
+#controls > .control-label { display: block; margin-bottom: 6px; }
+.text-input {
+    width: 100%;
+    min-height: var(--tap);
+    margin-top: 6px;
+    padding: 0 12px;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-ctl);
+    font: 700 18px var(--font-display);
+    color: var(--ink);
+}
+.field.invalid .text-input { border-color: var(--error); }
+#copies-box { margin-top: 10px; }
+#copies-box .type-count > span { font-size: 15px; }
+
 /* ------------------------------------------------------------ Smale skjermer */
 @media (max-width: 1180px) {
     .topbar { flex-wrap: wrap; }

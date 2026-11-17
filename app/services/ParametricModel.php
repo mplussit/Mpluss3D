@@ -37,6 +37,7 @@ interface ParametricModel
      *   variables  tall som sendes med -D
      *   bounds     forventede ytre mål ['min' => [x,y,z], 'max' => [x,y,z]]
      *   shells     (valgfri) antall lukkede skall, 2 for en hul figur (standard 1)
+     *   euler      (valgfri) forventet Euler-karakteristikk, 2 − 2 · antall gjennomgående hull
      *   filename   filnavn ved nedlasting
      *   count      hvor mange eksemplarer som skal skrives ut
      *   cache_key  streng som identifiserer geometrien

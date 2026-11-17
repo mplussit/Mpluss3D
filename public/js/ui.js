@@ -73,12 +73,15 @@ export const DOWNLOAD_ICON = '<svg width="16" height="16" viewBox="0 0 16 16" ar
 /**
  * Henter en fil og lagrer den med gitt navn. Feil fra API-et (JSON) vises
  * som melding og ved feltene. Knappen er deaktivert mens filen hentes;
- * afterwards() kalles til slutt (for å sette knappene riktig igjen).
+ * afterwards() kalles til slutt (for å sette knappene riktig igjen). Med body
+ * sendes parameterne som JSON (POST).
  */
-export async function downloadFrom(url, filename, button, afterwards) {
+export async function downloadFrom(url, filename, button, afterwards, body = null) {
     if (button) button.disabled = true;
     try {
-        const res = await fetch(url);
+        const res = body
+            ? await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+            : await fetch(url);
         const type = res.headers.get('Content-Type') || '';
         if (!res.ok || type.includes('application/json')) {
             const data = await res.json().catch(() => ({}));

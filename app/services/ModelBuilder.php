@@ -68,7 +68,7 @@ final class ModelBuilder
         $stl = $dir . '/model.stl';
         try {
             $run = $this->scad->render($scadFile, $part['variables'], $stl);
-            $report = $this->inspector->inspect($stl, $part['bounds'], $this->tolerance, (int) ($part['shells'] ?? 1));
+            $report = $this->inspector->inspect($stl, $part['bounds'], $this->tolerance, (int) ($part['shells'] ?? 1), $part['euler'] ?? null);
             if (!$report['ok']) {
                 throw new GenerationException(
                     'Den genererte modellen besto ikke kvalitetskontrollen og kan ikke lastes ned.',

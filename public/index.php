@@ -8,6 +8,7 @@
  *   index.php?side=base10       base 10 / plassverdimateriell
  *   index.php?side=tallstaver   tallstaver (Cuisenaire-staver)
  *   index.php?side=romfigurer   romfigurer og utbrettingsmodeller
+ *   index.php?side=regnmedlego  Regn med Lego (rammer til LEGO-klosser)
  *
  * Sidene er definert i app/config/pages.php. Bare sider som står der,
  * kan vises (side-parameteren brukes aldri som filsti).
@@ -15,7 +16,7 @@
 declare(strict_types=1);
 
 header('X-Content-Type-Options: nosniff');
-$v = '9';   // øk for å tvinge ny CSS/JS i nettleseren
+$v = '10';   // øk for å tvinge ny CSS/JS i nettleseren
 
 $site = require __DIR__ . '/../app/config/pages.php';
 $slug = $_GET['side'] ?? null;

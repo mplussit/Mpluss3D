@@ -25,9 +25,11 @@ final class StlInspector
     /**
      * @param array{min:array{float,float,float},max:array{float,float,float}}|null $expected
      * @param int $shells antall lukkede skall (2 for en hul figur med lukket hulrom)
+     * @param int|null $euler forventet Euler-karakteristikk når legemet har gjennomgående
+     *                   hull (2 − 2 · antall hull, f.eks. 0 for en ramme uten bunn)
      * @return array<string,mixed> rapport; 'ok' => bool og 'problems' => list<string>
      */
-    public function inspect(string $file, ?array $expected = null, float $tolerance = 0.02, int $shells = 1): array
+    public function inspect(string $file, ?array $expected = null, float $tolerance = 0.02, int $shells = 1, ?int $euler = null): array
     {
         $problems = [];
         $data = @file_get_contents($file);
@@ -111,7 +113,8 @@ final class StlInspector
         }
 
         $v = count($vertices);
-        $euler = $v - $undirected + ($f - $degenerate);
+        $expectedEuler = $euler ?? 2 * $shells;
+        $eulerValue = $v - $undirected + ($f - $degenerate);
 
         if ($degenerate > 0) {
             $problems[] = "$degenerate degenererte trekanter.";
@@ -125,8 +128,8 @@ final class StlInspector
         if ($volume <= 0) {
             $problems[] = 'Volumet er ikke positivt (normalene peker innover).';
         }
-        if ($boundary === 0 && $nonManifold === 0 && $euler !== 2 * $shells) {
-            $problems[] = "Uventet topologi (Euler-karakteristikk $euler, forventet " . (2 * $shells) . ').';
+        if ($boundary === 0 && $nonManifold === 0 && $eulerValue !== $expectedEuler) {
+            $problems[] = "Uventet topologi (Euler-karakteristikk $eulerValue, forventet $expectedEuler).";
         }
 
         $size = [$max[0] - $min[0], $max[1] - $min[1], $max[2] - $min[2]];
@@ -147,7 +150,7 @@ final class StlInspector
             'triangles'  => $f,
             'vertices'   => $v,
             'edges'      => $undirected,
-            'euler'      => $euler,
+            'euler'      => $eulerValue,
             'boundary_edges'     => $boundary,
             'non_manifold_edges' => $nonManifold,
             'degenerate' => $degenerate,

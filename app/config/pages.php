@@ -87,5 +87,18 @@ return [
             'template'    => 'solids.php',
             'script'      => 'js/pages/solids.js',
         ],
+        'regnmedlego' => [
+            'model'       => 'lego',
+            'title'       => 'Regn med Lego',
+            'h1'          => 'Regn med Lego',
+            'group'       => 'konkreter',
+            'themes'      => ['tall', 'plassverdi'],
+            'description' => 'Rammer som elevene fyller med LEGO®-klosser. Antallet knottplasser i en full ramme er en mengde, '
+                . 'og flere rammer med regnetegn mellom blir et regnestykke, for eksempel 8 + 4 = 12. Tegn formen i et rutenett, '
+                . 'velg vegg, bunn og klaring, og merk rammen med tall eller papiretikett. PDF-en har etiketter i faktisk størrelse.',
+            'preview'     => 'assets/previews/regnmedlego.jpg',
+            'template'    => 'lego.php',
+            'script'      => 'js/pages/lego.js',
+        ],
     ],
 ];

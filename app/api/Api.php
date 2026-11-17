@@ -12,6 +12,8 @@ declare(strict_types=1);
  *   GET  api.php?action=stl&id=…[&download=1]      henter én STL (forhåndsvisning eller nedlasting)
  *   GET  api.php?action=zip&model=…&…              alle STL-delene + oversikt.txt i én ZIP
  *   GET  api.php?action=pdf[&model=…]&…            PDF fra de samme parameterne
+ *   POST api.php?action=zip|pdf&model=… (JSON)     som over, med parameterne i JSON
+ *                                                  (prosjekter som er for store for adressen)
  *   GET  api.php?action=describe[&model=…]&…       modellbeskrivelse (JSON) for M+
  */
 final class Api
@@ -36,8 +38,8 @@ final class Api
                 ['GET', 'schema']     => $this->schema(),
                 ['POST', 'generate']  => $this->generate(),
                 ['GET', 'stl']        => $this->stl(),
-                ['GET', 'zip']        => $this->zip(),
-                ['GET', 'pdf']        => $this->pdf(),
+                ['GET', 'zip'], ['POST', 'zip'] => $this->zip(),
+                ['GET', 'pdf'], ['POST', 'pdf'] => $this->pdf(),
                 ['GET', 'describe']   => $this->describe(),
                 default               => $this->json(['ok' => false, 'error' => 'Ukjent forespørsel.'], 404),
             };
@@ -78,12 +80,32 @@ final class Api
         $this->json(['ok' => true] + $this->model()->schema());
     }
 
+    /** JSON-kroppen i en POST-forespørsel (høyst 64 kB), eller null. */
+    private function jsonBody(): ?array
+    {
+        $raw = file_get_contents('php://input', false, null, 0, 64 * 1024);
+        $input = json_decode((string) $raw, true);
+        return is_array($input) ? $input : null;
+    }
+
+    /** Validerte parametere fra JSON (POST) eller spørrestrengen (GET). */
+    private function requestParams(ParametricModel $model): array
+    {
+        if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
+            $input = $this->jsonBody();
+            if ($input === null) {
+                throw new GenerationException('Ugyldig forespørsel.', 'Ugyldig JSON.', 400, 'bad_request');
+            }
+            return $model->validate($input);
+        }
+        return $model->validate($this->queryParams($model));
+    }
+
     private function generate(): void
     {
         $model = $this->model();
-        $raw = file_get_contents('php://input', false, null, 0, 16 * 1024);
-        $input = json_decode((string) $raw, true);
-        if (!is_array($input)) {
+        $input = $this->jsonBody();
+        if ($input === null) {
             $this->json(['ok' => false, 'error' => 'Ugyldig forespørsel.'], 400);
             return;
         }
@@ -157,7 +179,7 @@ final class Api
             throw new GenerationException('ZIP-nedlasting er ikke tilgjengelig på serveren.', 'PHP-utvidelsen zip mangler.', 501, 'no_zip');
         }
         $model = $this->model();
-        $params = $model->validate($this->queryParams($model));
+        $params = $this->requestParams($model);
         $parts = $model->parts($params);
         $builder = $this->builder($model);
 
@@ -183,7 +205,7 @@ final class Api
     private function pdf(): void
     {
         $model = $this->model();
-        $params = $model->validate($this->queryParams($model));
+        $params = $this->requestParams($model);
         $pdf = $model->renderPdf($params);
         $name = $model->pdfFilename($params);
         header('Content-Type: application/pdf');

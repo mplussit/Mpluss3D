@@ -14,6 +14,7 @@ Modellene i dag:
 | **Base 10** (`?side=base10`) | `base10` | én fil per objekttype + ZIP | oversikt, bygg tall, veksling, regning og plassverditabell (6 sider) |
 | **Tallstaver** (`?side=tallstaver`) | `rods` | én fil per stavlengde + ZIP | lærerveiledning, tall, regning, brøk og arbeidsark (7 sider) |
 | **Romfigurer** (`?side=romfigurer`) | `solids` | én figur (massiv eller hul) | utbrettingsfigur i 1:1 med limfliker, og oppgaver på tre nivåer med fasit (6 sider) |
+| **Regn med Lego** (`?side=regnmedlego`) | `lego` | én fil per ramme + ZIP | oversikt over rammene og regnestykket, og papiretiketter i faktisk størrelse |
 
 STL og PDF bygges fra **samme validerte parametersett**. Forhåndsvisningen i nettleseren viser **de genererte STL-filene**, så det som vises, er nøyaktig det som lastes ned.
 
@@ -34,14 +35,15 @@ STL og PDF bygges fra **samme validerte parametersett**. Forhåndsvisningen i ne
 11. [Base 10 / plassverdimateriell](#base-10--plassverdimateriell)
 12. [Tallstaver / Cuisenaire-staver](#tallstaver--cuisenaire-staver)
 13. [Romfigurer og utbrettingsmodeller](#romfigurer-og-utbrettingsmodeller)
-14. [Modellbeskrivelse (JSON) for M+](#modellbeskrivelse-json-for-m)
-15. [API](#api)
-16. [Legge til nye modellparametere](#legge-til-nye-modellparametere)
-17. [Legge til en ny modellgenerator](#legge-til-en-ny-modellgenerator)
-18. [Tester](#tester)
-19. [Drift på server](#drift-på-server)
-20. [Kjente begrensninger](#kjente-begrensninger)
-21. [Beslutninger og avvik fra spesifikasjonen](#beslutninger-og-avvik-fra-spesifikasjonen)
+14. [Regn med Lego](#regn-med-lego)
+15. [Modellbeskrivelse (JSON) for M+](#modellbeskrivelse-json-for-m)
+16. [API](#api)
+17. [Legge til nye modellparametere](#legge-til-nye-modellparametere)
+18. [Legge til en ny modellgenerator](#legge-til-en-ny-modellgenerator)
+19. [Tester](#tester)
+20. [Drift på server](#drift-på-server)
+21. [Kjente begrensninger](#kjente-begrensninger)
+22. [Beslutninger og avvik fra spesifikasjonen](#beslutninger-og-avvik-fra-spesifikasjonen)
 
 ---
 
@@ -63,6 +65,7 @@ mplus-3d/
 │       ├── rods-viewer.js          RodsViewer: trapp / enkeltstav / tallkombinasjoner
 │       ├── rod-combos.js           Tallkombinasjoner (samme regler som RodTasks i PHP)
 │       ├── solids-viewer.js        SolidViewer: romfigur med flater, kanter og hjørner fra geometrimodellen
+│       ├── lego-viewer.js          LegoViewer: valgt ramme / alle rammer, klosser som illustrasjon
 │       ├── net-svg.js              Utbrettingsnettet som SVG (samme nett og A4-plassering som PDF-en)
 │       └── pages/
 │           ├── menu.js             Menyen
@@ -70,7 +73,8 @@ mplus-3d/
 │           ├── fractions.js        Brøksirkelsiden
 │           ├── base10.js           Base 10-siden
 │           ├── rods.js             Tallstavsiden
-│           └── solids.js           Romfigursiden
+│           ├── solids.js           Romfigursiden
+│           └── lego.js             Regn med Lego (rutenett, rammer, regnetegn)
 ├── app/
 │   ├── bootstrap.php               Autoload, konfig, logging
 │   ├── api/Api.php                 HTTP-endepunkter, felles for alle modeller
@@ -83,7 +87,8 @@ mplus-3d/
 │   │       ├── fraction_circles.php  Brøksirkler: parametere, farger, navn, merking
 │   │       ├── base10_blocks.php   Base 10: parametere, objekttyper, antall, farger, material
 │   │       ├── number_rods.php     Tallstaver: parametere, lengder, antall, farger, tallmerking
-│   │       └── solid_figures.php   Romfigurer: figurer, parametere, flatefarger, material
+│   │       ├── solid_figures.php   Romfigurer: figurer, parametere, flatefarger, material
+│   │       └── lego_frames.php     Regn med Lego: modul, høyde, tykkelser, merkefelt, etiketter
 │   └── services/
 │       ├── ParametricModel.php     Grensesnittet alle modeller implementerer
 │       ├── ModelRegistry.php       Slår opp modeller fra models.php
@@ -115,12 +120,17 @@ mplus-3d/
 │       ├── SolidNetPdf.php         Romfigurer: PDF med utbrettingsfiguren
 │       ├── SolidTasks.php          Romfigurer: oppgaver etter figur og nivå
 │       ├── SolidTasksPdf.php       Romfigurer: oppgave-PDF med fasit
-│       └── SolidDrawing.php        Romfigurer: strektegning av figuren i PDF
+│       ├── SolidDrawing.php        Romfigurer: strektegning av figuren i PDF
+│       ├── LegoShape.php           Regn med Lego: formen (sammenheng, utsparinger, arealer)
+│       ├── LegoText.php            Regn med Lego: tillatte tegn og tekstbredde
+│       ├── LegoModel.php           Regn med Lego: validering, geometri, STL-deler, beskrivelse
+│       └── LegoPdf.php             Regn med Lego: oversikt og etiketter
 ├── models/
 │   ├── dice/cube.scad              Terninggeometrien
 │   ├── base10/block.scad           Én base 10-kloss (ener, tier, hundrer, tusener)
 │   ├── rods/rod.scad               Én tallstav (lengde 1–10, inndeling, tall)
 │   ├── solids/solid.scad           Romfigurene (massive eller hule), bygd av tall fra Solid-klassene
+│   ├── lego/frame.scad             Én Lego-ramme (form som tall, tekst som tegnkoder)
 │   └── fractions/
 │       ├── sector.scad             Én brøkbrikke (sektor)
 │       └── fonts/LiberationSans-Bold.ttf  Font til brøkmerkingen og tallstavene (SIL OFL)
@@ -133,7 +143,8 @@ mplus-3d/
 │   └── cleanup.php                 Slett utløpte filer (cron)
 └── tests/
     ├── run.php                     Automatiserte tester
-    └── solids.php                  Tester for romfigurene (tas inn av run.php)
+    ├── solids.php                  Tester for romfigurene (tas inn av run.php)
+    └── lego.php                    Tester for Regn med Lego (tas inn av run.php)
 ```
 
 Prinsipper:
@@ -152,7 +163,7 @@ Startsiden (`public/index.php` uten parameter) er en meny som fungerer som menye
 * Ett klikk på en side viser tittel, forhåndsbilde og beskrivelse til høyre.
 * Dobbeltklikk, Enter eller klikk på bildet åpner siden. Piltastene flytter valget.
 * Sist valgte side og tema huskes i nettleseren.
-* På modellsidene har toppfeltet lenkene **Meny | Terning | Brøksirkler | Base 10 | Tallstaver | Romfigurer**. Logoen fører også tilbake til menyen.
+* På modellsidene har toppfeltet lenkene **Meny | Terning | Brøksirkler | Base 10 | Tallstaver | Romfigurer | Regn med Lego**. Logoen fører også tilbake til menyen.
 
 Sidene, gruppene og temaene står i `app/config/pages.php`. Forhåndsbildene (`public/assets/previews/`) er skjermbilder av 3D-visningen.
 
@@ -260,7 +271,7 @@ Standardverdiene er gyldige for alle størrelser fra 15 til 50 mm.
 3. `ModelBuilder` sjekker hurtigbufferen. Nøkkelen er parametere + SCAD-filens hash + binær.
 4. `ScadGenerator` starter OpenSCAD med `proc_open()` og en **argumentliste**, uten shell:
    * Bare `.scad`-filer under `models/` kan brukes. Brukeren kan aldri sende egen kode.
-   * `-D`-variabler har validerte navn og er alltid tall.
+   * `-D`-variabler har validerte navn og er alltid tall eller flate lister med tall (formen i Regn med Lego, og tekst som tegnkoder).
    * Kjøretiden er begrenset (`OPENSCAD_TIMEOUT`). Ved tidsavbrudd drepes prosessen med eventuelle underprosesser.
    * Høyst 2 samtidige prosesser (`ProcessSlots`, fillåser). Overskytende forespørsler venter inntil 20 s og får så 503.
 5. STL-filen skrives i en mappe med tilfeldig navn (`storage/generated/<32 hex>/`).
@@ -687,6 +698,82 @@ Utbrettingsnettet er matematisk eksakt: sylinderens rektangel er π · d langt, 
 * Spissen på kjegle og pyramide blir litt avrundet av dysen.
 * Skriv ut PDF-nettet på tykt papir (160–200 g/m²) i 100 %, og kontroller at kontrollinjen er 50 mm.
 
+## Regn med Lego
+
+Rammer som elevene fyller med standard LEGO®-klosser. Antallet knottplasser i en full ramme er en mengde. Flere rammer med regnetegn mellom blir et regnestykke, for eksempel 8 + 4 = 12.
+
+LEGO® er et varemerke for LEGO-gruppen, som ikke står bak eller godkjenner M+ 3D. Det står på siden, i PDF-en og i ZIP-oversikten.
+
+### Form og størrelse
+
+* Hver rute i rutenettet er én knottplass, 8 × 8 mm. Læreren angir bredde og lengde (1–20 knottplasser) og trykker «Lag rektangel», eller tegner formen ved å klikke og dra i rutenettet.
+* Mengden er antallet valgte ruter og vises med en gang («Plass til 16 knotter»).
+* Rutenettet er bare et redigeringsverktøy. Det blir aldri vegger mellom rutene, bare langs formens kant.
+* **Gyldige former** henger sammen langs sidene. Utsparinger (tomme ruter helt omsluttet av formen) er tillatt og blir hull gjennom rammen og bunnen.
+* **Ugyldige former** gir en forklaring og kan ikke lastes ned:
+  * tom form
+  * flere deler
+  * ruter som bare møtes i et hjørne
+  * en utsparing uten bunn, fordi veggen rundt utsparingen da blir en løs del
+* Formen sier ikke noe om hvilke klosser som får plass. En L-form kan for eksempel kreve smale klosser eller 1 × 1-klosser.
+
+### Mål (`app/config/models/lego_frames.php`)
+
+| Innstilling | Standard | Område | Betydning |
+|---|---|---|---|
+| Modulmål | 8 mm | fast | én knottplass |
+| Innvendig høyde | 9,6 mm | fast | fra klossenes støtteflate til overkant ramme |
+| Veggtykkelse (`wall`) | 2 mm | 1,2–3 mm | bygges utover |
+| Bunn (`bottom`) | på | på/av | flat, uten knotter |
+| Bunntykkelse (`bottom_thickness`) | 1,5 mm | 0,8–4 mm | vises bare med bunn |
+| Ekstra klaring (`clearance`) | 0,2 mm | 0–0,5 mm | per side, langs alle kanter mot klossene |
+| Feltdybde (`field_depth`) | 12 mm | 8–25 mm | hvor langt merkefeltet stikker ut |
+| Tekstdybde (`text_depth`) | 0,6 mm | 0,4–1,2 mm | innfelt dybde eller opphøyd høyde |
+
+Læreren skriver tallene i millimeter (desimalkomma går fint). Serveren validerer dem. Veggtykkelse og klaring er startverdier som skal justeres etter prøveutskrift.
+
+### Geometri (`models/lego/frame.scad`)
+
+* **Åpningen** er unionen av rutene utvidet med klaringen på alle sider (`offset(delta = …)`, skarpe hjørner, også innvendig). For et rektangel blir innvendig bredde `kolonner · 8 + 2 · klaring`. 4 × 4 gir 32,4 × 32,4 mm.
+* **Veggen bygges utover.** Ytterkanten er rutene utvidet med klaring + vegg. Tykkere vegg endrer bare utvendige mål.
+* **Høyde:** med bunn er total høyde bunntykkelse + 9,6 mm (1,5 mm bunn gir 11,1 mm), og klossene står på bunnen. Uten bunn er høyden 9,6 mm, og rammen er åpen gjennom.
+* **Bunnen** er flat og en del av samme legeme som veggene. Den følger rammens form, og utsparinger er åpne gjennom den.
+* **Merkefelt** (valgfritt): en flat blokk utenfor veggen, like høy som rammen, langs den lengste rekken av ruter på valgt side (foran, bak, venstre, høyre). Feltet slås sammen med ytterkanten i 2D før ekstrudering, så det er én del. Det ligger alltid utenfor åpningen.
+* **Tallmerking:** mengden eller en kort egen tekst (høyst 12 tegn, for eksempel «8 + 8»). Teksten er innfelt (standard) eller opphøyd på toppen av feltet, og står rett vei sett fra feltets side.
+  * Størrelsen tilpasses feltet. Får teksten ikke plass med minst 3,5 mm høye tegn, får læreren en melding, og rammen kan ikke lastes ned før teksten er kortere eller feltet større.
+  * Innfelt tekst er høyst så dyp at det er 1,5 mm materiale under.
+* **Ingen brukertekst til OpenSCAD:** formen sendes som en liste med tall (rutenes kolonne og rad), og teksten som en liste med tegnkoder (`chr()` i SCAD). `ScadGenerator` godtar bare tall og flate lister med tall.
+* **Tekstbredde:** Liberation Sans Bold har samme bredder som Helvetica Bold, så `LegoText` regner ut bredden fra FPDFs metrikkfil før OpenSCAD kjøres. Målt i OpenSCAD er sifrene ca. 0,98 · `size` høye, og blekkbredden er høyst ca. 1,42 · bredde i em · `size` (beregningen bruker 1,45). Testene kontrollerer i STL-fila at teksten ligger innenfor feltet.
+* **Kontroll av hver STL:** lukket og manifold, eksakte ytre mål og riktig Euler-tall (2 − 2 · antall gjennomgående hull: én åpning uten bunn pluss én per utsparing).
+
+### Forhåndsvisning
+
+* **Valgt ramme** eller **alle rammer** på rad med regnetegnene mellom. Valgt ramme er mørkere.
+* Gjennomsiktige 1 × 1-klosser med knotter i hver knottplass viser hvor mye rammen rommer. De lages i nettleseren og er aldri med i STL-fila. De kan slås av.
+* Under visningen står rammestripa (form, mengde, regnetegn mellom rammene, Ny ramme, Dupliser, Slett) og målene for valgt ramme: kapasitet, innvendig, utvendig (med og uten merkefelt), total og innvendig høyde, og etikett- og tekststørrelse.
+
+### Flere rammer og regnestykker
+
+* Opptil 12 rammer per prosjekt. Hver ramme har egen form, tykkelser, bunn, merkefelt og tekst.
+* «Dupliser» kopierer alle innstillingene til en ny ramme rett etter.
+* Regnetegnet etter hver ramme (+, −, ×, ÷, =) velges i stripa. Tegnene vises i stripa, i 3D-visningen, i PDF-oversikten og eventuelt som papirkort på 30 × 30 mm. De lages ikke som 3D-modeller.
+
+### Eksport
+
+* **STL for valgt ramme:** `lego-ramme-01-4x4-16.stl` (nummer, mål for rektangler, mengde). Uregelmessige former får bare nummer og mengde: `lego-ramme-02-10.stl`.
+* **Alle rammer (ZIP):** `regn-med-lego-3-rammer.zip` med én STL per ramme og `oversikt.txt`.
+* **PDF med etiketter og oversikt** (`LegoPdf`, samme stil som de andre PDF-ene):
+  * **Oversikt:** regnestykket, og for hver ramme formen, mengden, innvendige og utvendige mål, høyden, veggen, klaringen, merkefeltet, STL-fila og etikettene. Til slutt står en merknad om at passformen er uprøvd.
+  * **Etiketter i faktisk størrelse:** én per eksemplar, nøyaktig feltets mål minus 1 mm marg på hver side, med klippelinjer og klippemerker.
+    * Innholdet er mengden, egen tekst eller tom etikett til håndskrift.
+    * Øverst står et tydelig 100 %-varsel, og nederst er det en kontrollinje på 100 mm.
+    * Regnetegnene kan tas med som papirkort.
+* Store prosjekter får ikke plass i en adresse. ZIP og PDF hentes derfor med POST og prosjektet som JSON. GET med `project=<JSON>` virker også.
+
+### Passform
+
+Passformen mot ekte klosser er **uprøvd** til en ramme er skrevet ut og testet. 8 mm per knottplass og 0,2 mm klaring per side er startverdier. Klossene har 0,1 mm luft per side i seg selv, og printeren kan gi for store eller for små mål. Skriv ut én 2 × 2- og én 4 × 4-ramme først, og juster klaringen.
+
 ## Modellbeskrivelse (JSON) for M+
 
 `DiceModel::describe()` gir en selvstendig beskrivelse av modellen. Den returneres fra `generate` og fra `api.php?action=describe&…`, og kan senere sendes til M+ for å lage tilpasset dekor:
@@ -711,7 +798,7 @@ Utbrettingsnettet er matematisk eksakt: sylinderens rektangel er π · d langt, 
 
 ## API
 
-Modellen velges med `model=` (`dice`, `fractions`, `base10`, `rods` eller `solids`, se `app/config/models.php`). Uten `model` brukes terningen, så alle eldre kall virker som før.
+Modellen velges med `model=` (`dice`, `fractions`, `base10`, `rods`, `solids` eller `lego`, se `app/config/models.php`). Uten `model` brukes terningen, så alle eldre kall virker som før.
 
 | Metode og URL | Beskrivelse |
 |---|---|
@@ -748,7 +835,16 @@ GET  api.php?action=pdf&model=solids&shape=cylinder&cylinder_diameter=100&cylind
 GET  api.php?action=pdf&model=solids&shape=cylinder&cylinder_diameter=100&cylinder_height=150&document=net&net_print=scaled
 GET  api.php?action=pdf&model=solids&shape=pyramid&document=tasks&level=3
 GET  api.php?action=describe&model=solids&shape=triprism
+
+POST api.php?action=generate&model=lego
+     {"frames":[{"rows":["1111","1111"],"operator":"+"},{"rows":["11","11"],"operator":"="},
+                {"rows":["1111","1111","1111"],"field":"label","copies":2}],"operator_cards":true}
+POST api.php?action=zip&model=lego   (samme JSON)
+POST api.php?action=pdf&model=lego   (samme JSON)
+GET  api.php?action=describe&model=lego&project=%7B%22frames%22%3A%5B%7B%22rows%22%3A%5B%2211%22%5D%7D%5D%7D
 ```
+
+`zip` og `pdf` godtar også POST med parameterne som JSON (alle modeller). Det trengs for prosjekter som er for store for en adresse.
 
 Feil returneres som `{"ok":false,"error":"…","errors":[{"field":"…","message":"…"}]}` med statuskode 400, 404, 422, 500, 501, 503 eller 504.
 
@@ -785,7 +881,24 @@ php tests/run.php          # alle tester (ca. 40 s)
 php tests/run.php brøk     # bare tester med «brøk» i navnet
 ```
 
-Testene dekker 143 tilfeller.
+Testene dekker 160 tilfeller.
+
+**Regn med Lego (16, i `tests/lego.php`):**
+
+* standardverdier, og 4 × 4: 16 knottplasser, 32,4 × 32,4 mm innvendig og 11,1 mm høyde (9,6 mm uten bunn)
+* veggtykkelse endrer bare utvendige mål, bunntykkelse bare total høyde, og innvendig bredde = kolonner · 8 + 2 · klaring
+* former: trimming, L-form, utsparing og bukt; ugyldige former (tom, flere deler, bare hjørnekontakt, utsparing uten bunn, ugyldig rutenett) med forståelige meldinger
+* validering av tall (grenser, desimalkomma, farlige verdier), tekst, valg, antall, prosjekt som JSON, og hvilken ramme en feil gjelder
+* merkefeltet overlapper aldri åpningen (fire sider, fire former), og for lang tekst avvises med melding
+* flere rammer: regnestykket «8 + 4 = 12», filnavn, hurtigbuffer og ZIP-oversikt
+* SCAD-variablene er bare tall og lister med tall; strenger i lister avvises
+* STL fra OpenSCAD:
+  * 4 × 4 med og uten bunn: mål, volum lik beregningen, åpen gjennom uten bunn, bunnen ved 1,5 mm og åpningen ved ±16,2 mm
+  * L-form uten punkter inne i åpningen (ingen skillevegger), med klaring i det innvendige hjørnet
+  * utsparing: hull gjennom, med vegg 0,2 mm fra knottplassene
+  * ytterverdier for vegg, klaring og bunn
+  * innfelt og opphøyd tekst innenfor feltet på alle sider, også lange uttrykk og «Åtte»; innfelt tekst går aldri gjennom
+* PDF: oversikt, 100 %-varsel, 100 mm-linjal, etiketter med nøyaktig feltets mål minus 2 mm, regnetegn-kort av og på, og tekst innenfor arket for 1 og 12 rammer
 
 **Romfigurer (31, i `tests/solids.php`):**
 
@@ -951,6 +1064,15 @@ Romfigurer:
 - [ ] Skriv ut et stort nett (sylinder 100 × 150 mm) på flere ark. Sett arkene sammen etter skjøtekantene og passmerkene, og kontroller målene.
 - [ ] Gå gjennom oppgave-PDF-en på alle tre nivåer for én figur, sammen med 3D-modellen og papirfiguren.
 
+Regn med Lego:
+
+- [ ] Skriv ut en 2 × 2- og en 4 × 4-ramme med standardverdier, med og uten bunn. Prøv ekte LEGO-klosser: de skal gå lett ned og ikke falle ut når rammen snus. Juster klaringen (0,1–0,3 mm) etter resultatet, og noter verdien for printeren.
+- [ ] Mål innvendig 32,4 × 32,4 mm og total høyde 11,1 mm (9,6 mm uten bunn) med skyvelære.
+- [ ] Skriv ut en L-form og en ring med utsparing: klossene skal få plass i det innvendige hjørnet, og utsparingen skal være åpen gjennom bunnen.
+- [ ] Kontroller at innfelt og opphøyd tekst er lesbar, også på en 1 × 6-ramme.
+- [ ] Skriv ut PDF-en i 100 %, mål linjalen, klipp ut en etikett og legg den på etikettfeltet: den skal ha 1 mm luft på hver side.
+- [ ] Åpne ZIP-filene i en slicer: ingen reparasjonsvarsler, og ingen støtte trengs.
+
 ## Drift på server
 
 ### Docker på M+-serveren
@@ -994,6 +1116,10 @@ M+ 3D kjører som to Docker Swarm-stakker på samme server som M+. HAProxy sende
 * **Romfigurer: hulrommet er lukket.** Det kan ikke fylles med vann eller sand, og taket i det er avrundet til 45°. Volumoppgavene gjelder figurens ytre mål.
 * **Romfigurer: papirets tykkelse er ikke tatt med i nettet.** Med vanlig papir er feilen under 0,5 mm.
 * **Romfigurer: limflikene har fast vinkel.** Er en kant kort, blir flikens skrå hjørner brattere. Testene kontrollerer at fliker aldri overlapper.
+* **Regn med Lego: passformen er uprøvd.** Den må testes med ekte klosser på den aktuelle printeren (se «Passform»).
+* **Regn med Lego: merkefeltet følger den lengste rekken av ruter på valgt side.** På uregelmessige former kan feltet derfor bli kort. Velg en annen side om teksten ikke får plass.
+* **Regn med Lego: regnetegn finnes bare på papir og i visningen,** ikke som 3D-modeller (første versjon).
+* **Regn med Lego: ingen etikettlomme.** Etikettene limes eller tapes på det flate feltet.
 * **Menyen er statisk.** Sidene står i `pages.php`. Det finnes ingen innlogging, lisens eller database.
 
 ## Beslutninger og avvik fra spesifikasjonen
@@ -1007,6 +1133,12 @@ M+ 3D kjører som to Docker Swarm-stakker på samme server som M+. HAProxy sende
 * **Base 10: papiroppgaver.** Oppgaver som krever flere klosser enn settet har, merkes «PAPIROPPGAVE» i stedet for å utelates, når de fortsatt er nyttige. Et standardsett uten tusenere får derfor én merket oppgave om veksling til tusener.
 * **Felles PDF-grunnlag (`WorksheetPdf`).** Topptekst, bunntekst og oppgaveoppsett er flyttet ut av `FractionPdfGenerator`, så Base 10 gjenbruker dem. Brøk-PDF-ene er kontrollert byte for byte før og etter flyttingen (fire sett), og de var identiske.
 * **Modellnavn i API-et** kan nå inneholde sifre (`base10`). Kontrollen er `^[a-z][a-z0-9_]{0,31}$`.
+* **Regn med Lego: veggtykkelse høyst 3 mm.** Med klaring opptil 0,5 mm er en utsparing eller bukt på én knottplass da alltid minst 1 mm åpen, og formens topologi er kjent på forhånd (kontrolleres med Euler-tallet).
+* **Regn med Lego: ruter som bare møtes i et hjørne avvises,** også inne i en ellers sammenhengende form. Veggen i et slikt hjørne blir så tynn at den ikke kan skrives ut.
+* **Regn med Lego: en utsparing krever bunn.** Uten bunn henger veggen rundt utsparingen ikke sammen med resten av rammen.
+* **Regn med Lego: merkefeltet er like høyt som rammen.** Da er toppen flat og i samme høyde som rammen, sterk og lett å skrive ut, og den passer til både tekst og etikett. Teksten kan være innfelt (standard) eller opphøyd.
+* **Regn med Lego: etiketten er 1 mm mindre enn feltet på hver side,** så den er lett å legge på. Målene står under hver etikett i PDF-en.
+* **Regn med Lego: navnet på siden** er «Regn med Lego», som bestilt. Varemerkemerknaden står på siden, i PDF-en og i ZIP-oversikten.
 * **Romfigurer: hul modell for alle seks figurene.** Spesifikasjonen åpnet for å begrense hul modell til figurer som kan printes uten støtte. Med 45°-tak i hulrommet går det for alle seks. Ulempen er at veggen blir tykkere øverst i kube, prisme og sylinder. Det står i panelet når hul modell er valgt.
 * **Romfigurer: trekantprismet ligger på det største rektangelet.** Da peker ingen flater nedover. Trekantene er likevel grunnflatene i oppgavene og egenskapene.
 * **Romfigurer: sirklene i sylinder- og kjeglenettet er egne deler.** Limtennene sitter på rektangelet og sektoren, ikke på sirklene. Det er lettere å lime, og «Utbrettingsfigur» viser fortsatt alle flatene.

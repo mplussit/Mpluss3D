@@ -15,4 +15,5 @@ return [
     'base10'    => Base10Model::class,
     'rods'      => RodModel::class,
     'solids'    => SolidModel::class,
+    'lego'      => LegoModel::class,
 ];
