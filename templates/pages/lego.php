@@ -32,7 +32,9 @@
                 <p class="hint">Dra for å rotere · rull eller knip for å zoome · «Standard» tilbakestiller visningen · rutenettet er 10 mm</p>
             </div>
         </div>
+    </section>
 
+    <aside class="panel" aria-label="Innstillinger for valgt ramme">
         <section class="lego-card" aria-labelledby="frames-heading">
             <div class="lego-card-head">
                 <h2 class="panel-heading" id="frames-heading">Rammer og regnestykke</h2>
@@ -46,16 +48,8 @@
             <p id="equation" class="equation num" aria-live="polite"></p>
         </section>
 
-        <section class="lego-card" aria-labelledby="dims-heading">
-            <h2 class="panel-heading" id="dims-heading">Mål for valgt ramme</h2>
-            <p id="capacity" class="capacity num"></p>
-            <dl id="dims" class="props"></dl>
-            <p class="hint">Klossene står på bunnen (eller på bordet når rammen er uten bunn). En form kan kreve smale klosser eller 1 × 1-klosser.
-                Passformen er uprøvd til den er testet med ekte klosser.</p>
-        </section>
-    </section>
+        <hr class="rule">
 
-    <aside class="panel" aria-label="Innstillinger for valgt ramme">
         <form id="controls" novalidate>
             <p class="panel-frame" id="panel-frame">Ramme 1</p>
 
@@ -114,6 +108,16 @@
             </div>
             <label class="check"><input type="checkbox" id="operator-cards"> <span>Ta med regnetegnene som papirkort i PDF-en</span></label>
         </form>
+
+        <hr class="rule">
+
+        <section class="lego-card" aria-labelledby="dims-heading">
+            <h2 class="panel-heading" id="dims-heading">Mål for valgt ramme</h2>
+            <p id="capacity" class="capacity num"></p>
+            <dl id="dims" class="props"></dl>
+            <p class="hint">Klossene står på bunnen (eller på bordet når rammen er uten bunn). En form kan kreve smale klosser eller 1 × 1-klosser.
+                Passformen er uprøvd til den er testet med ekte klosser.</p>
+        </section>
 
         <hr class="rule">
 

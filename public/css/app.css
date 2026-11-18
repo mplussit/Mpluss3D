@@ -848,3 +848,86 @@ p { margin: 0; }
     .preview-title { font-size: 24px; }
     .btn-start { width: 100%; }
 }
+
+
+/* ------------------------------------------------------------ Kompakt oppsett (nov. 2026)
+   Mindre toppfelt, 3D-visningen fyller høyden, tettere panel. Kortene
+   «Rammer og regnestykke», «Mål for valgt ramme» og «Geometriske egenskaper»
+   ligger i panelet, så bare panelet ruller. */
+.panel .lego-card, .panel .props-card {
+    margin: 0;
+    padding: 0;
+    background: none;
+    box-shadow: none;
+}
+.panel .lego-card + .lego-card { margin-top: 0; }
+.panel .props { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+.app-fixed { --tap: 36px; }
+
+/* Toppfelt: én linje. Fra M+ står «Meny i M+» rett etter logoen. */
+.app-fixed .topbar { flex-wrap: nowrap; min-height: 52px; gap: 12px; }
+.app-fixed .topbar:has(.model-nav:not(.model-nav-single)) { flex-wrap: wrap; }
+.app-fixed .logo-tile { padding: 4px 7px 5px; }
+.app-fixed .logo-tile img { height: 34px; }
+.app-fixed .brand { font-size: 19px; order: 2; }
+.app-fixed .topbar-rule { margin: 14px 0; order: 2; }
+.app-fixed .topbar h1 {
+    order: 2;
+    flex: 0 1 auto;
+    min-width: 0;
+    font-size: 17px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.app-fixed .help-link { order: 3; margin-left: auto; white-space: nowrap; font-size: 14px; }
+.app-fixed .model-nav-single { order: 1; flex: none; flex-basis: auto; margin: 0; }
+.app-fixed .model-nav-single a {
+    min-height: 32px;
+    padding: 0 14px;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    font-size: 14px;
+}
+.app-fixed .model-nav-single a:hover { border-color: var(--ink); }
+.app-fixed .model-nav-single a[aria-current="page"] { border-radius: 999px; border-bottom-color: var(--line); }
+
+/* 3D-visningen fyller resten av høyden i venstre kolonne. */
+.app-fixed .layout { padding: 4px 22px 16px; gap: 16px; }
+.app-fixed .viewer-wrap { display: flex; flex-direction: column; }
+.app-fixed .viewer-wrap > .viewer-surface { flex: 1 1 0; min-height: 300px; display: flex; flex-direction: column; }
+.app-fixed .viewer-surface > .viewer { flex: 1 1 auto; height: auto; min-height: 0; }
+.app-fixed .viewer-surface.solid-views { display: grid; grid-template-rows: minmax(0, 1fr); }
+.app-fixed .solid-3d { height: 100%; }
+.app-fixed .solid-views .viewer,
+.app-fixed .solid-views .solid-net,
+.app-fixed .solid-views[data-show="both"] .viewer,
+.app-fixed .solid-views[data-show="both"] .solid-net { height: 100%; min-height: 0; }
+.app-fixed .viewer-controls { margin-top: 8px; gap: 8px 20px; }
+.app-fixed .viewer-info { margin-top: 6px; }
+.app-fixed .model-info { font-size: 14px; }
+.app-fixed .hint { font-size: 13px; }
+
+/* Tettere panel. */
+.app-fixed .panel { padding: 16px 18px 18px; }
+.app-fixed .panel-heading { margin-bottom: 8px; font-size: 12px; }
+.app-fixed .rule { margin: 4px 0 14px; }
+.app-fixed .field { margin-bottom: 10px; }
+.app-fixed .field-label { font-size: 15px; }
+.app-fixed .field input[type=range] { height: 26px; }
+.app-fixed .field-help { margin-top: -2px; font-size: 13px; line-height: 1.35; }
+.app-fixed .check { font-size: 14px; }
+.app-fixed .control-label { font-size: 12px; }
+.app-fixed .segmented { margin-bottom: 10px; }
+.app-fixed .segmented-compact { margin-bottom: 0; }
+.app-fixed .segmented label { font-size: 14px; }
+.app-fixed .shape-options label { min-height: 50px; }
+.app-fixed .downloads { margin-top: 14px; gap: 8px; }
+.app-fixed .btn { min-height: 50px; padding: 7px 16px; }
+.app-fixed .btn-small { min-height: var(--tap); padding: 0 14px; }
+.app-fixed .btn-title { font-size: 16px; }
+.app-fixed .frame-card { min-width: 72px; min-height: 84px; }
+.app-fixed .capacity { font-size: 20px; margin-bottom: 8px; }
+.app-fixed .equation { font-size: 16px; margin-top: 8px; }

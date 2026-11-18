@@ -32,16 +32,6 @@
                 <p class="hint">Dra for å rotere · rull eller knip for å zoome · «Standard» tilbakestiller visningen · rutenettet er 10 mm</p>
             </div>
         </div>
-
-        <section class="props-card" aria-labelledby="props-heading">
-            <h2 class="panel-heading" id="props-heading">Geometriske egenskaper</h2>
-            <dl id="props" class="props"></dl>
-            <p id="props-note" class="hint" hidden></p>
-            <details class="props-more">
-                <summary>Flere mål og formler</summary>
-                <table class="props-table" id="measures"><tbody></tbody></table>
-            </details>
-        </section>
     </section>
 
     <aside class="panel" aria-label="Innstillinger">
@@ -96,6 +86,18 @@
                 <span class="btn-title">Last ned PDF-oppgaver</span><span class="btn-sub" id="tasks-sub">Fem sider med oppgaver og fasit</span>
             </button>
         </div>
+
+        <hr class="rule">
+
+        <section class="props-card" aria-labelledby="props-heading">
+            <h2 class="panel-heading" id="props-heading">Geometriske egenskaper</h2>
+            <dl id="props" class="props"></dl>
+            <p id="props-note" class="hint" hidden></p>
+            <details class="props-more">
+                <summary>Flere mål og formler</summary>
+                <table class="props-table" id="measures"><tbody></tbody></table>
+            </details>
+        </section>
     </aside>
 </main>
 

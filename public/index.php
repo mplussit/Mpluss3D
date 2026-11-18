@@ -16,7 +16,7 @@
 declare(strict_types=1);
 
 header('X-Content-Type-Options: nosniff');
-$v = '11';   // øk for å tvinge ny CSS/JS i nettleseren
+$v = '12';   // øk for å tvinge ny CSS/JS i nettleseren
 
 $site = require __DIR__ . '/../app/config/pages.php';
 $slug = $_GET['side'] ?? null;
@@ -77,7 +77,7 @@ $menuTitle = $mplusBack ? 'Til menyen i M+' : 'Til menyen';
     <div class="brand">M+ <span class="brand-3d">3D</span></div>
     <span class="topbar-rule" aria-hidden="true"></span>
     <h1><?= $e($page ? $page['h1'] : 'Velg modell') ?></h1>
-    <nav class="model-nav" aria-label="Sider">
+    <nav class="model-nav<?= $mplusBack ? ' model-nav-single' : '' ?>" aria-label="Sider">
         <a href="<?= $e($menuHref) ?>" class="nav-menu"<?= $page ? '' : ' aria-current="page"' ?>>
             <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 2h5v5H2zM9 2h5v5H9zM2 9h5v5H2zM9 9h5v5H9z" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
             <?= $mplusBack ? 'Meny i M+' : 'Meny' ?>
