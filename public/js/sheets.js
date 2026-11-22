@@ -18,6 +18,7 @@
  *   sheets.refresh();   // etter hver endring i innstillingene
  */
 import * as pdfjs from 'pdfjs-dist';
+import { initCollect } from './collect.js';
 
 pdfjs.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@6.2.108/build/pdf.worker.min.mjs';
 
@@ -56,7 +57,7 @@ export function initSheets({ threeD = {}, docs = [] }) {
 
     const state = {
         active: { kind: '3d', index: 0 },
-        loaded: docs.map(() => ({ key: null, doc: null, titles: [], error: null })),
+        loaded: docs.map(() => ({ key: null, doc: null, bytes: null, titles: [], error: null })),
         seq: 0,
         timer: null,
         renderTask: null,
@@ -173,18 +174,20 @@ export function initSheets({ threeD = {}, docs = [] }) {
                 }
                 const titles = parseTitles(res.headers.get('X-Page-Titles'));
                 const data = new Uint8Array(await res.arrayBuffer());
-                const doc = await pdfjs.getDocument({ data, isEvalSupported: false }).promise;
+                // pdf.js tar over bufferen, så den får en kopi. Originalen brukes av PDF-dialogen.
+                const doc = await pdfjs.getDocument({ data: data.slice(), isEvalSupported: false }).promise;
                 if (seq !== state.seq) { doc.destroy(); return; }
                 cur.doc?.destroy();
-                Object.assign(cur, { key, doc, titles, error: null });
+                Object.assign(cur, { key, doc, bytes: data, titles, error: null });
             } catch (err) {
                 if (seq !== state.seq) return;
                 cur.doc?.destroy();
-                Object.assign(cur, { key, doc: null, titles: [], error: err.message || 'Arket kunne ikke lages.' });
+                Object.assign(cur, { key, doc: null, bytes: null, titles: [], error: err.message || 'Arket kunne ikke lages.' });
             }
         }));
         if (seq !== state.seq) return;
         renderBar();
+        collect.refresh();
         if (state.active.kind === 'pdf') drawPage();
     }
 
@@ -238,6 +241,14 @@ export function initSheets({ threeD = {}, docs = [] }) {
     for (const type of ['input', 'change', 'click']) {
         panel?.addEventListener(type, () => setTimeout(refresh, 0));
     }
+
+    // PDF-knappen i toppfeltet: lag PDF av valgte sider eller legg dem i oppsamlings-PDF-en.
+    const collect = initCollect({
+        documents: () => state.loaded.map((d) => ({
+            bytes: d.bytes, titles: d.titles, numPages: d.doc ? d.doc.numPages : 0, error: d.error,
+        })),
+        loading: () => docs.length > 0 && state.loaded.some((d) => !d.doc && !d.error),
+    });
 
     wrap.dataset.tab = '3d';
     renderBar();

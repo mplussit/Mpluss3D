@@ -1138,3 +1138,45 @@ p { margin: 0; }
 .app-fixed .viewer-wrap > .sheet-pane { flex: 1 1 0; }
 .sheet-stage { border-radius: var(--radius-paper); }
 .app-fixed .sheet-stage { height: auto; }
+
+/* ------------------------------------------------------------ PDF-knapp og PDF-dialog (oppsamlings-PDF) */
+.pdf-btn { margin-left: auto; cursor: pointer; }
+.app-fixed .pdf-btn { margin-left: auto; }
+.pdf-btn + .help-btn, .app-fixed .pdf-btn + .help-btn { margin-left: 0; }
+.pdf-count {
+    min-width: 20px;
+    padding: 1px 6px;
+    border-radius: 999px;
+    background: var(--orange);
+    color: var(--ink);
+    font-size: 12px;
+    font-weight: 700;
+    text-align: center;
+}
+.pdf-dialog { width: min(560px, calc(100vw - 32px)); max-width: none; }
+.pdf-dialog h3 { margin: 0 0 8px; font: 700 16px var(--font-display); }
+.pdf-section { padding: 14px 0; border-top: 1px solid var(--line); }
+.pdf-dialog h2 + .pdf-section { border-top: 0; padding-top: 0; }
+.pdf-pages { display: flex; flex-direction: column; gap: 6px; max-height: 220px; overflow-y: auto; }
+.pdf-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.pdf-actions .btn-small { min-height: 40px; padding: 0 16px; font-size: 14px; }
+.pdf-feedback { min-height: 1.2em; margin: 8px 0 0; font-size: 14px; color: var(--ink-2); }
+.pdf-dialog p.pdf-feedback:empty { margin: 0; min-height: 0; }
+.pdf-collect-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; max-height: 160px; overflow-y: auto; }
+.pdf-collect-list li { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 14px; }
+.pdf-collect-list li > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pdf-remove {
+    flex: none; width: 28px; height: 28px; border: 1px solid var(--line); border-radius: 999px;
+    background: var(--paper); color: var(--ink); cursor: pointer;
+}
+.pdf-remove:hover { border-color: var(--ink); }
+.pdf-label-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.pdf-label-row input[type=text], .pdf-filename input {
+    flex: 1 1 180px; min-height: 36px; padding: 0 10px; border: 1px solid var(--line);
+    border-radius: var(--radius-ctl); background: var(--paper); color: var(--ink); font: inherit;
+}
+.pdf-label-row input:disabled { opacity: .5; }
+.pdf-filename { display: flex; flex-direction: column; gap: 4px; margin-top: 12px; font-weight: 600; font-size: 14px; }
+.pdf-filename span { display: flex; align-items: center; gap: 6px; font-weight: 400; }
+.pdf-dialog form { border-top: 1px solid var(--line); padding-top: 12px; }
+.pdf-dialog[aria-busy="true"] { cursor: progress; }
