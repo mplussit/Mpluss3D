@@ -14,7 +14,7 @@ declare(strict_types=1);
  *   ['k' => 'poly',   'p' => [[x, y], …], 'f', 's', 'lw', 'open' => true for åpen linje]
  *   ['k' => 'text',   'x', 'y' (grunnlinje), 't', 'sz' (mm), 'b' (fet), 'c' (farge), 'a' (L, C, R)]
  *
- * Både PDF-en (MarblePdf) og forhåndsvisningen i nettleseren
+ * Både PDF-en (MarblePdf) og hullarket på 3D-modellen i nettleseren
  * (public/js/sheet-svg.js) tegner nøyaktig disse elementene, så de kan
  * ikke bli forskjellige. Tekstbredder måles med FPDFs Helvetica-metrikk.
  *

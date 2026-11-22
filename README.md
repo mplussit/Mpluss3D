@@ -69,7 +69,7 @@ mplus-3d/
 │       ├── solids-viewer.js        SolidViewer: romfigur med flater, kanter og hjørner fra geometrimodellen
 │       ├── lego-viewer.js          LegoViewer: valgt ramme / alle rammer, klosser som illustrasjon
 │       ├── marble-viewer.js        MarbleViewer: kulespillet på bunnen, med hullarket som tekstur
-│       ├── sheet-svg.js            Kulespill: én side fra serveren som SVG (brukes ikke lenger, se sheets.js)
+│       ├── sheet-svg.js            Kulespill: hullarket som SVG, brukt som tekstur i MarbleViewer
 │       ├── net-svg.js              Utbrettingsnettet som SVG (samme nett og A4-plassering som PDF-en)
 │       └── pages/
 │           ├── menu.js             Menyen

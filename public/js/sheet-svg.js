@@ -1,5 +1,7 @@
 /**
- * Kulespill: én side fra serveren som SVG.
+ * Kulespill: én side fra serveren som SVG. MarbleViewer bruker den som
+ * tekstur for hullarket på 3D-modellen. Arkfanene viser selve PDF-en
+ * (se sheets.js).
  *
  * Sidene kommer ferdig lagt ut fra MarbleSheets (describe().pages): enkle
  * tegneelementer i millimeter fra øvre venstre hjørne av A4. PDF-en

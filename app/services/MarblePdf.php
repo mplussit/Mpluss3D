@@ -5,7 +5,7 @@ declare(strict_types=1);
  * Tegner sidene fra MarbleSheets i en PDF (A4, mm).
  *
  * Bare tegneelementene fra MarbleSheets brukes, de samme som
- * forhåndsvisningen i nettleseren tegner (public/js/sheet-svg.js).
+ * hullarket på 3D-modellen tegnes med (public/js/sheet-svg.js).
  */
 final class MarblePdf
 {
