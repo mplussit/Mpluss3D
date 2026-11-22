@@ -23,6 +23,18 @@ pdfjs.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@6
 
 const DEBOUNCE_MS = 400;
 
+// Små ikoner foran fanenavnet: en terning for 3D-fanene og et liggende
+// ark med «PDF» for PDF-fanene. De er pynt, skjermlesere leser bare navnet.
+const ICONS = {
+    '3d': '<svg class="sheet-tab-icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false">'
+        + '<path d="M8 1.5 14 4.75v6.5L8 14.5 2 11.25v-6.5Z M2 4.75 8 8l6-3.25 M8 8v6.5"'
+        + ' fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>',
+    pdf: '<svg class="sheet-tab-icon sheet-tab-icon-pdf" viewBox="0 0 20 14" aria-hidden="true" focusable="false">'
+        + '<rect x="0.75" y="0.75" width="18.5" height="12.5" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.3"/>'
+        + '<text x="10" y="9.6" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="6.6"'
+        + ' font-weight="700" fill="currentColor">PDF</text></svg>',
+};
+
 export function initSheets({ threeD = {}, docs = [] }) {
     const wrap = document.querySelector('.viewer-wrap');
     const bar = document.getElementById('sheet-tabs');
@@ -88,13 +100,12 @@ export function initSheets({ threeD = {}, docs = [] }) {
         const tab = (kind, i, label) => {
             const on = state.active.kind === kind && state.active.index === i;
             return `<button type="button" role="tab" class="sheet-tab sheet-tab-${kind}" data-kind="${kind}" data-index="${i}"`
-                + ` aria-selected="${on}" tabindex="${on ? 0 : -1}" title="${esc(label)}">${esc(label)}</button>`;
+                + ` aria-selected="${on}" tabindex="${on ? 0 : -1}" title="${esc(label)}">`
+                + `${ICONS[kind]}<span class="sheet-tab-label">${esc(label)}</span></button>`;
         };
         const loading = docs.length && !pages.length && !state.loaded.some((d) => d.error);
         bar.innerHTML = `
-            <span class="sheet-group" role="presentation">3D</span>
             ${three.map((o, i) => tab('3d', i, o.label)).join('')}
-            ${docs.length ? '<span class="sheet-group sheet-group-pdf" role="presentation">PDF</span>' : ''}
             ${pages.map((p, i) => tab('pdf', i, p.label)).join('')}
             ${loading ? '<span class="sheet-loading">Lager arkene …</span>' : ''}`;
     }

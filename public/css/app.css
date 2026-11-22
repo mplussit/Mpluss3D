@@ -1076,18 +1076,12 @@ p { margin: 0; }
     overflow-y: hidden;
     scrollbar-width: thin;
 }
-.sheet-group {
-    align-self: center;
-    flex: none;
-    padding: 0 6px 0 4px;
-    font: 700 11px var(--font-body);
-    letter-spacing: .08em;
-    color: var(--ink-2);
-}
-.sheet-group-pdf { margin-left: 14px; padding-left: 14px; border-left: 1px solid var(--line); }
 .sheet-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     flex: none;
-    max-width: 150px;
+    max-width: 170px;
     min-height: 32px;
     padding: 0 10px;
     margin-bottom: -1px;
@@ -1098,10 +1092,11 @@ p { margin: 0; }
     border-radius: var(--radius-ctl) var(--radius-ctl) 0 0;
     font: 600 13px var(--font-body);
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
     cursor: pointer;
 }
+.sheet-tab-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.sheet-tab-icon { flex: none; width: 15px; height: 15px; }
+.sheet-tab-icon-pdf { width: 19px; height: 13px; }
 .sheet-tab:hover { color: var(--ink); background: var(--paper); }
 .sheet-tab[aria-selected="true"] {
     color: var(--ink);
