@@ -15,6 +15,7 @@ declare(strict_types=1);
  *   POST api.php?action=zip|pdf&model=… (JSON)     som over, med parameterne i JSON
  *                                                  (prosjekter som er for store for adressen)
  *   GET  api.php?action=describe[&model=…]&…       modellbeskrivelse (JSON) for M+
+ *   POST api.php?action=describe&model=… (JSON)    som over, med parameterne i JSON
  */
 final class Api
 {
@@ -40,7 +41,7 @@ final class Api
                 ['GET', 'stl']        => $this->stl(),
                 ['GET', 'zip'], ['POST', 'zip'] => $this->zip(),
                 ['GET', 'pdf'], ['POST', 'pdf'] => $this->pdf(),
-                ['GET', 'describe']   => $this->describe(),
+                ['GET', 'describe'], ['POST', 'describe'] => $this->describe(),
                 default               => $this->json(['ok' => false, 'error' => 'Ukjent forespørsel.'], 404),
             };
         } catch (ValidationException $e) {
@@ -217,7 +218,7 @@ final class Api
     private function describe(): void
     {
         $model = $this->model();
-        $params = $model->validate($this->queryParams($model));
+        $params = $this->requestParams($model);
         $this->json($model->describe($params) + ['warnings' => $model->warnings($params)]);
     }
 

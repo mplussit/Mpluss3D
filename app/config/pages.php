@@ -100,5 +100,18 @@ return [
             'template'    => 'lego.php',
             'script'      => 'js/pages/lego.js',
         ],
+        'kulespill' => [
+            'model'       => 'marble',
+            'title'       => 'Kulespill',
+            'h1'          => 'Kulespill med ark',
+            'group'       => 'konkreter',
+            'themes'      => ['tall', 'plassverdi', 'sannsynlighet'],
+            'description' => 'Et kulespill med ni lommer og en bunn. Mellom bunnen og spillet ligger et ark som syns gjennom hullene '
+                . 'i lommene. Velg tall, regnestykker, bokstaver eller symboler, og hvilke oppgaver elevene skal få. '
+                . '«Lag stykker» gir nye verdier, og PDF-en har hullark, verdiark, oppgaver og fasit.',
+            'preview'     => 'assets/previews/kulespill.jpg',
+            'template'    => 'marble.php',
+            'script'      => 'js/pages/marble.js',
+        ],
     ],
 ];

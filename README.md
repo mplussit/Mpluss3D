@@ -15,8 +15,9 @@ Modellene i dag:
 | **Tallstaver** (`?side=tallstaver`) | `rods` | én fil per stavlengde + ZIP | lærerveiledning, tall, regning, brøk og arbeidsark (7 sider) |
 | **Romfigurer** (`?side=romfigurer`) | `solids` | én figur (massiv eller hul) | utbrettingsfigur i 1:1 med limfliker, og oppgaver på tre nivåer med fasit (6 sider) |
 | **Regn med Lego** (`?side=regnmedlego`) | `lego` | én fil per ramme + ZIP | oversikt over rammene og regnestykket, og papiretiketter i faktisk størrelse |
+| **Kulespill** (`?side=kulespill`) | `marble` | kulespillet og bunnen (faste filer) | hullark i 1:1 under spillet, verdiark, oppgaver og fasit |
 
-STL og PDF bygges fra **samme validerte parametersett**. Forhåndsvisningen i nettleseren viser **de genererte STL-filene**, så det som vises, er nøyaktig det som lastes ned.
+STL og PDF bygges fra **samme validerte parametersett**. Kulespillet er unntaket: spillet og bunnen er faste STL-filer tegnet i SolidCraft, og det læreren lager, er arkene. Forhåndsvisningen i nettleseren viser **de genererte STL-filene**, så det som vises, er nøyaktig det som lastes ned.
 
 ---
 
@@ -36,14 +37,15 @@ STL og PDF bygges fra **samme validerte parametersett**. Forhåndsvisningen i ne
 12. [Tallstaver / Cuisenaire-staver](#tallstaver--cuisenaire-staver)
 13. [Romfigurer og utbrettingsmodeller](#romfigurer-og-utbrettingsmodeller)
 14. [Regn med Lego](#regn-med-lego)
-15. [Modellbeskrivelse (JSON) for M+](#modellbeskrivelse-json-for-m)
-16. [API](#api)
-17. [Legge til nye modellparametere](#legge-til-nye-modellparametere)
-18. [Legge til en ny modellgenerator](#legge-til-en-ny-modellgenerator)
-19. [Tester](#tester)
-20. [Drift på server](#drift-på-server)
-21. [Kjente begrensninger](#kjente-begrensninger)
-22. [Beslutninger og avvik fra spesifikasjonen](#beslutninger-og-avvik-fra-spesifikasjonen)
+15. [Kulespill](#kulespill)
+16. [Modellbeskrivelse (JSON) for M+](#modellbeskrivelse-json-for-m)
+17. [API](#api)
+18. [Legge til nye modellparametere](#legge-til-nye-modellparametere)
+19. [Legge til en ny modellgenerator](#legge-til-en-ny-modellgenerator)
+20. [Tester](#tester)
+21. [Drift på server](#drift-på-server)
+22. [Kjente begrensninger](#kjente-begrensninger)
+23. [Beslutninger og avvik fra spesifikasjonen](#beslutninger-og-avvik-fra-spesifikasjonen)
 
 ---
 
@@ -66,6 +68,8 @@ mplus-3d/
 │       ├── rod-combos.js           Tallkombinasjoner (samme regler som RodTasks i PHP)
 │       ├── solids-viewer.js        SolidViewer: romfigur med flater, kanter og hjørner fra geometrimodellen
 │       ├── lego-viewer.js          LegoViewer: valgt ramme / alle rammer, klosser som illustrasjon
+│       ├── marble-viewer.js        MarbleViewer: kulespillet på bunnen, med hullarket som tekstur
+│       ├── sheet-svg.js            Kulespill: én side fra serveren som SVG (samme elementer som PDF-en)
 │       ├── net-svg.js              Utbrettingsnettet som SVG (samme nett og A4-plassering som PDF-en)
 │       └── pages/
 │           ├── menu.js             Menyen
@@ -74,7 +78,8 @@ mplus-3d/
 │           ├── base10.js           Base 10-siden
 │           ├── rods.js             Tallstavsiden
 │           ├── solids.js           Romfigursiden
-│           └── lego.js             Regn med Lego (rutenett, rammer, regnetegn)
+│           ├── lego.js             Regn med Lego (rutenett, rammer, regnetegn)
+│           └── marble.js           Kulespill (innhold, oppgaver, varianter, «Lag stykker»)
 ├── app/
 │   ├── bootstrap.php               Autoload, konfig, logging
 │   ├── api/Api.php                 HTTP-endepunkter, felles for alle modeller
@@ -88,7 +93,8 @@ mplus-3d/
 │   │       ├── base10_blocks.php   Base 10: parametere, objekttyper, antall, farger, material
 │   │       ├── number_rods.php     Tallstaver: parametere, lengder, antall, farger, tallmerking
 │   │       ├── solid_figures.php   Romfigurer: figurer, parametere, flatefarger, material
-│   │       └── lego_frames.php     Regn med Lego: modul, høyde, tykkelser, merkefelt, etiketter
+│   │       ├── lego_frames.php     Regn med Lego: modul, høyde, tykkelser, merkefelt, etiketter
+│   │       └── marble_game.php     Kulespill: hullene fra SolidCraft-modellen, innhold, symboler, grenser
 │   └── services/
 │       ├── ParametricModel.php     Grensesnittet alle modeller implementerer
 │       ├── ModelRegistry.php       Slår opp modeller fra models.php
@@ -124,7 +130,10 @@ mplus-3d/
 │       ├── LegoShape.php           Regn med Lego: formen (sammenheng, utsparinger, arealer)
 │       ├── LegoText.php            Regn med Lego: tillatte tegn og tekstbredde
 │       ├── LegoModel.php           Regn med Lego: validering, geometri, STL-deler, beskrivelse
-│       └── LegoPdf.php             Regn med Lego: oversikt og etiketter
+│       ├── LegoPdf.php             Regn med Lego: oversikt og etiketter
+│       ├── MarbleModel.php         Kulespill: validering, beskrivelse (sidene), PDF
+│       ├── MarbleSheets.php        Kulespill: innhold (frø), oppgaver, fasit og sideoppsett som tegneelementer
+│       └── MarblePdf.php           Kulespill: tegner sidene i PDF
 ├── models/
 │   ├── dice/cube.scad              Terninggeometrien
 │   ├── base10/block.scad           Én base 10-kloss (ener, tier, hundrer, tusener)
@@ -144,7 +153,8 @@ mplus-3d/
 └── tests/
     ├── run.php                     Automatiserte tester
     ├── solids.php                  Tester for romfigurene (tas inn av run.php)
-    └── lego.php                    Tester for Regn med Lego (tas inn av run.php)
+    ├── lego.php                    Tester for Regn med Lego (tas inn av run.php)
+    └── marble.php                  Tester for kulespillet (tas inn av run.php)
 ```
 
 Prinsipper:
@@ -163,7 +173,7 @@ Startsiden (`public/index.php` uten parameter) er en meny som fungerer som menye
 * Ett klikk på en side viser tittel, forhåndsbilde og beskrivelse til høyre.
 * Dobbeltklikk, Enter eller klikk på bildet åpner siden. Piltastene flytter valget.
 * Sist valgte side og tema huskes i nettleseren.
-* På modellsidene har toppfeltet lenkene **Meny | Terning | Brøksirkler | Base 10 | Tallstaver | Romfigurer | Regn med Lego**. Logoen fører også tilbake til menyen.
+* På modellsidene har toppfeltet lenkene **Meny | Terning | Brøksirkler | Base 10 | Tallstaver | Romfigurer | Regn med Lego | Kulespill**. Logoen fører også tilbake til menyen.
 
 Sidene, gruppene og temaene står i `app/config/pages.php`. Forhåndsbildene (`public/assets/previews/`) er skjermbilder av 3D-visningen.
 
@@ -783,6 +793,44 @@ Læreren skriver tallene i millimeter (desimalkomma går fint). Serveren valider
 
 Passformen mot ekte klosser er **uprøvd** til en ramme er skrevet ut og testet. 8 mm per knottplass og 0,2 mm klaring per side er startverdier. Klossene har 0,1 mm luft per side i seg selv, og printeren kan gi for store eller for små mål. Skriv ut én 2 × 2- og én 4 × 4-ramme først, og juster klaringen.
 
+## Kulespill
+
+Et kulespill med ni lommer, tegnet i SolidCraft (`kulespill.sc`), og en bunn med lomme til et ark (`kulespill_bunn.sc`). Under hver lomme er det et gjennomgående hull på Ø20 mm. Arket mellom bunnen og spillet syns derfor gjennom hullene, og læreren bestemmer hva som står der. En klinkekule i glass blir liggende i lommen, og innholdet kan leses gjennom den.
+
+### Spillet og bunnen
+
+| Del | Fil | Mål |
+|---|---|---|
+| Kulespill | `public/assets/kulespill/kulespill.stl` | 160 × 250 × 18 mm, rund topp (R80), utskytingsbane til høyre |
+| Bunn | `public/assets/kulespill/kulespill-bunn.stl` | 166 × 256 × 5 mm: 2 mm gulv, 3 mm kant, lomme 161 × 251 mm og to grephakk |
+
+* Filene er eksportert fra SolidCraft og er ikke parametriske i appen. Endres modellen, eksporteres STL-ene på nytt, og hullkoordinatene i `app/config/models/marble_game.php` oppdateres fra modellen.
+* Kanten på bunnen (5 mm over bordet) slutter under stempelhullet foran i spillet, som starter ca. 6,6 mm over bordet.
+* Hullsentrene (mm, origo i sentrum av den runde toppen): (−9,5; 12,5), (−59,5; −37,5), (40,5; −37,5), (−59,5 / −9,5 / 40,5; −87,5) og (−59,5 / −9,5 / 40,5; −137,5).
+
+### Arkene
+
+Læreren velger:
+
+* **I hullene:** tall (fra–til, eventuelt ulike), regnestykker (regnearter + − × :, svar opptil 10, 20, 50 eller 100, bare hele og positive svar, gangetabellen opptil 10), bokstaver A–I eller ni symboler i farger. Bokstaver og symboler får verdier (fra–til) på et eget **verdiark**.
+* **Oppgaver:**
+  * *Kulerunde:* to tabeller (Runde 1 og 2) med 2–8 kuler, der eleven skriver det som står i hullet, verdien og summen.
+  * *Regn med verdiene* (bokstaver og symboler): stykker som A + B – C med 2–5 ledd, en rute under hvert ledd til verdien og en svarrute. Kan begrenses til at summen aldri er under null underveis.
+  * *Finn hullene:* «[ ] + [ ] = 13» med to eller tre hull. Summene er ulike, og fasiten har alle løsningene.
+  * *Fasit* for læreren.
+* **Varianter:** 1–10 sett med ulike verdier. Med tall og regnestykker får hver variant sitt eget hullark. Med bokstaver og symboler er hullarket det samme for alle, og variantene har hvert sitt verdiark og oppgaveark.
+* **Lag stykker** gir et nytt tilfeldig frø (`seed`). Alt innhold lages deterministisk av frøet (`MarbleRandom`, xorshift32), så samme valg gir alltid de samme arkene.
+
+**Hullarket** er A4 i 1:1. Arket på 160 × 250 mm ligger midt på siden med hjørnemerker, omrisset av den runde toppen og en kontrollinje på 100 mm. Innholdet står midt over hvert hull, innenfor Ø17 mm. Alle hullene på et ark har samme tekststørrelse: den største som får plass i alle.
+
+### Forhåndsvisning = PDF
+
+`MarbleSheets` legger ut alle sidene som enkle tegneelementer i mm (rektangel, linje, sirkel, mangekant, tekst med størrelse og justering). Tekstbredder måles med FPDFs Helvetica-metrikk. `describe()` sender elementene til nettleseren, der `sheet-svg.js` tegner dem som SVG, og `MarblePdf` tegner nøyaktig de samme elementene i PDF-en. Forhåndsvisningen og PDF-en kan derfor ikke bli forskjellige. Minus skrives som tankestrek (–), som har samme bredde som sifrene og finnes i PDF-fontene.
+
+I **3D-visningen** står spillet på bunnen, og hullarket for siden som er valgt, er lagt som tekstur på arket. «Løft spillet og se arket» løfter spillet 45 mm.
+
+API: `POST api.php?action=describe&model=marble` og `POST api.php?action=pdf&model=marble` med valgene som JSON (GET med de samme nøklene virker også).
+
 ## Modellbeskrivelse (JSON) for M+
 
 `DiceModel::describe()` gir en selvstendig beskrivelse av modellen. Den returneres fra `generate` og fra `api.php?action=describe&…`, og kan senere sendes til M+ for å lage tilpasset dekor:
@@ -807,7 +855,7 @@ Passformen mot ekte klosser er **uprøvd** til en ramme er skrevet ut og testet.
 
 ## API
 
-Modellen velges med `model=` (`dice`, `fractions`, `base10`, `rods`, `solids` eller `lego`, se `app/config/models.php`). Uten `model` brukes terningen, så alle eldre kall virker som før.
+Modellen velges med `model=` (`dice`, `fractions`, `base10`, `rods`, `solids`, `lego` eller `marble`, se `app/config/models.php`). Uten `model` brukes terningen, så alle eldre kall virker som før.
 
 | Metode og URL | Beskrivelse |
 |---|---|
@@ -816,7 +864,7 @@ Modellen velges med `model=` (`dice`, `fractions`, `base10`, `rods`, `solids` el
 | `GET api.php?action=stl&id=…[&download=1]` | Én STL-fil |
 | `GET api.php?action=zip&model=…&…` | Alle STL-delene og `oversikt.txt` i én ZIP |
 | `GET api.php?action=pdf[&model=…]&…[&download=1]` | PDF |
-| `GET api.php?action=describe[&model=…]&…` | Modellbeskrivelse |
+| `GET api.php?action=describe[&model=…]&…` | Modellbeskrivelse (også POST med JSON) |
 
 Eksempler:
 
@@ -890,7 +938,18 @@ php tests/run.php          # alle tester (ca. 40 s)
 php tests/run.php brøk     # bare tester med «brøk» i navnet
 ```
 
-Testene dekker 160 tilfeller.
+Testene dekker 172 tilfeller.
+
+**Kulespill (12, i `tests/marble.php`):**
+
+* hullene ligger på arket og innenfor spillet, og arket står midt på A4
+* validering: standardverdier, grenser, områder med plass til ulike verdier, regnearter, frø og farlige verdier
+* samme frø gir samme ark, mens nytt frø og andre varianter gir nye verdier
+* tall i området, regnestykker med riktige, hele og positive svar (alle regnearter og områder), «Regn med verdiene» med riktige svar og aldri under null, og «Finn hullene» med ulike summer og alle løsningene
+* sidene for alle innholdstyper og varianter, også oppgaver som går over flere sider
+* all tekst og alle ruter ligger innenfor A4 og over bunnteksten, og teksten og symbolene i hullene får plass innenfor Ø17 mm
+* PDF-en har like mange sider og de samme tekstene som forhåndsvisningen
+* STL-filene er hele binære STL-er
 
 **Regn med Lego (16, i `tests/lego.php`):**
 
@@ -1081,6 +1140,13 @@ Regn med Lego:
 - [ ] Kontroller at innfelt og opphøyd tekst er lesbar, også på en 1 × 6-ramme.
 - [ ] Skriv ut PDF-en i 100 %, mål linjalen, klipp ut en etikett og legg den på etikettfeltet: den skal ha 1 mm luft på hver side.
 - [ ] Åpne ZIP-filene i en slicer: ingen reparasjonsvarsler, og ingen støtte trengs.
+
+Kulespill:
+
+- [ ] Skriv ut kulespillet og bunnen. Arket (160 × 250 mm) skal ligge flatt i lomma, og spillet skal stå stødig oppå.
+- [ ] Skriv ut hullarket i 100 %, mål kontrollinja (100 mm) og klipp langs hjørnemerkene. Innholdet skal stå midt i alle ni hullene.
+- [ ] Kontroller at innholdet kan leses gjennom en klinkekule i glass, også lange regnestykker.
+- [ ] Kontroller at stempelet ikke tar borti kanten på bunnen.
 
 ## Drift på server
 

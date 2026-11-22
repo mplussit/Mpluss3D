@@ -16,4 +16,5 @@ return [
     'rods'      => RodModel::class,
     'solids'    => SolidModel::class,
     'lego'      => LegoModel::class,
+    'marble'    => MarbleModel::class,
 ];
