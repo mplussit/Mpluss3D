@@ -1,6 +1,7 @@
 <?php /** Base 10. Tas inn av public/index.php. Kontrollene fylles fra API-skjemaet. */ ?>
 <main class="layout">
     <section class="viewer-wrap" aria-label="3D-forhåndsvisning">
+        <nav id="sheet-tabs" class="sheet-tabs"></nav>
         <div class="viewer-surface">
             <div id="viewer" class="viewer" tabindex="0" aria-label="3D-modell av base 10-klossene. Dra for å rotere, rull eller knip for å zoome."></div>
             <div class="view-buttons" role="group" aria-label="Velg visning">
@@ -87,8 +88,8 @@
         <div id="message" class="message" role="alert" hidden></div>
 
         <div class="downloads">
-            <button type="button" id="download-zip" class="btn btn-primary" disabled>
-                <span class="btn-title">Last ned alle STL (ZIP)</span><span class="btn-sub" id="zip-sub">Én fil per objekt, parametere og utskriftsoversikt</span>
+            <button type="button" id="download-all" class="btn btn-primary" disabled>
+                <span class="btn-title">Last ned alle STL-filene</span><span class="btn-sub" id="all-sub">Én STL-fil per klosstype</span>
             </button>
             <button type="button" id="download-pdf" class="btn btn-secondary" disabled>
                 <span class="btn-title">Last ned PDF</span><span class="btn-sub">Oversikt, oppgaver og plassverditabell</span>
@@ -96,18 +97,3 @@
         </div>
     </aside>
 </main>
-
-<dialog id="help-dialog" class="dialog" aria-labelledby="help-title">
-    <h2 id="help-title">Hva er STL og PDF?</h2>
-    <p><strong>STL</strong> er 3D-modellen. Hver objekttype (ener, tier, hundrer, tusener) har én STL-fil med én kloss.
-        Åpne fila i programmet til 3D-printeren (for eksempel Bambu Studio, PrusaSlicer eller Cura) og skriv ut så mange
-        eksemplarer som står i lista. ZIP-fila har alle STL-filene, parameterne og en utskriftsoversikt.
-        Klossene ligger slik de skal skrives ut og trenger ikke support. Den hule tusenerkuben står med åpningen opp.</p>
-    <p><strong>PDF-en</strong> har seks sider: oversikt til læreren, «Bygg tall», «Hvilket tall?», veksling,
-        addisjon og subtraksjon, og en plassverditabell. Oppgavene passer til klossene i settet.
-        Oppgaver som krever flere klosser enn settet har, er merket «Papiroppgave».</p>
-    <p><strong>Tallbyggeren</strong> viser et tall fra 0 til 9999 med klosser. Den er bare en visning og lager ingen nye filer.</p>
-    <form method="dialog">
-        <button class="btn btn-secondary btn-small" value="close">Lukk</button>
-    </form>
-</dialog>

@@ -8,9 +8,10 @@
 import { FractionViewer } from '../fraction-viewer.js';
 import {
     API, $, fieldControl, setStatus, setFieldError, clearFieldError, clearAllErrors,
-    showMessage, hideMessage, downloadFrom, bindHelpDialog, bindViewButtons, webglMissing,
+    showMessage, hideMessage, downloadFrom, downloadAll, bindHelpDialog, bindViewButtons, webglMissing,
     fmt, escapeHtml, CHECK_ICON, DOWNLOAD_ICON,
 } from '../ui.js';
+import { initSheets } from '../sheets.js';
 
 const MODEL = 'fractions';
 const DEBOUNCE_MS = 350;
@@ -30,6 +31,12 @@ const state = {
 
 let viewer;
 let debounceTimer;
+
+// Arkfaner: 3D-visningene og én fane per side i PDF-en.
+const sheets = initSheets({
+    threeD: { group: '#mode-options' },
+    docs: [{ key: 'pdf', request: () => ({ url: `${API}?${query('pdf')}` }) }],
+});
 
 init().catch((err) => showMessage('Kunne ikke starte appen: ' + err.message));
 
@@ -133,8 +140,8 @@ function bindEvents() {
         const part = b && state.current?.parts.find((p) => p.id === b.dataset.download);
         if (part) downloadFrom(`${part.stl_url}&download=1`, part.filename, b, updateButtons);
     });
-    $('#download-zip').addEventListener('click', () =>
-        downloadFrom(`${API}?${query('zip')}`, `${baseName()}.zip`, $('#download-zip'), updateButtons));
+    $('#download-all').addEventListener('click', () =>
+        downloadAll(state.current?.parts ?? [], $('#download-all'), updateButtons));
     $('#download-pdf').addEventListener('click', () =>
         downloadFrom(`${API}?${query('pdf')}`, `${baseName()}.pdf`, $('#download-pdf'), updateButtons));
 }
@@ -277,12 +284,13 @@ function renderPrintList(data) {
     }).join('');
     const total = data.model.total_pieces;
     $('#print-total').textContent = `${total} ${total === 1 ? 'brikke' : 'brikker'}`;
-    $('#zip-sub').textContent = `${data.parts.length} ${data.parts.length === 1 ? 'fil' : 'filer'} og oversikt over antall`;
+    $('#all-sub').textContent = `${data.parts.length} ${data.parts.length === 1 ? 'STL-fil' : 'STL-filer'}, én per brøk`;
 }
 
 function updateButtons() {
     const ready = state.valid && !state.generating && !!state.current;
-    $('#download-zip').disabled = !ready;
+    $('#download-all').disabled = !ready;
     $('#download-pdf').disabled = !ready;
     document.querySelectorAll('#print-list [data-download]').forEach((b) => (b.disabled = !ready));
+    sheets.refresh();
 }

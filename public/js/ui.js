@@ -104,6 +104,22 @@ export async function downloadFrom(url, filename, button, afterwards, body = nul
     }
 }
 
+/**
+ * Laster ned alle STL-filene, én vanlig .stl-fil per del (ingen ZIP).
+ * Nettleseren kan spørre én gang om siden får laste ned flere filer.
+ */
+export async function downloadAll(parts, button, afterwards) {
+    if (button) button.disabled = true;
+    try {
+        for (const p of parts) {
+            await downloadFrom(`${p.stl_url}&download=1`, p.filename, null, null);
+            await new Promise((r) => setTimeout(r, 400));   // litt pause, så nettleseren tar alle
+        }
+    } finally {
+        afterwards?.();
+    }
+}
+
 /** Hjelpedialogen («Hva er STL og PDF?»). */
 export function bindHelpDialog() {
     const dialog = $('#help-dialog');

@@ -17,7 +17,7 @@
 declare(strict_types=1);
 
 header('X-Content-Type-Options: nosniff');
-$v = '13';   // øk for å tvinge ny CSS/JS i nettleseren
+$v = '14';   // øk for å tvinge ny CSS/JS i nettleseren
 
 $site = require __DIR__ . '/../app/config/pages.php';
 $slug = $_GET['side'] ?? null;
@@ -46,6 +46,12 @@ if ($page && is_string($back) && strlen($back) <= 500) {
 }
 $menuHref = $mplusBack ?? './';
 $menuTitle = $mplusBack ? 'Til menyen i M+' : 'Til menyen';
+
+// Hjelp-knappen: sidene på nettstedet som forklarer STL og PDF (app/config/config.php).
+$helpHref = (string) ((require __DIR__ . '/../app/config/config.php')['help_url'] ?? '');
+if ($page && $helpHref !== '') {
+    $helpHref .= '#' . rawurlencode((string) $slug);
+}
 ?>
 <!doctype html>
 <html lang="nb">
@@ -62,7 +68,8 @@ $menuTitle = $mplusBack ? 'Til menyen i M+' : 'Til menyen';
     {
         "imports": {
             "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
-            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/",
+            "pdfjs-dist": "https://cdn.jsdelivr.net/npm/pdfjs-dist@6.2.108/build/pdf.min.mjs"
         }
     }
     </script>
@@ -72,24 +79,20 @@ $menuTitle = $mplusBack ? 'Til menyen i M+' : 'Til menyen';
 <div id="app-frame" class="app-frame">
 <script src="js/appscale.js?v=<?= $v ?>"></script>
 <header class="topbar">
-    <a class="logo-tile" href="<?= $e($menuHref) ?>" title="<?= $e($menuTitle) ?>">
-        <img src="assets/mplus-logo.svg" alt="M+" width="86" height="64">
-    </a>
-    <div class="brand">M+ <span class="brand-3d">3D</span></div>
-    <span class="topbar-rule" aria-hidden="true"></span>
-    <h1><?= $e($page ? $page['h1'] : 'Velg modell') ?></h1>
-    <nav class="model-nav<?= $mplusBack ? ' model-nav-single' : '' ?>" aria-label="Sider">
-        <a href="<?= $e($menuHref) ?>" class="nav-menu"<?= $page ? '' : ' aria-current="page"' ?>>
-            <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 2h5v5H2zM9 2h5v5H9zM2 9h5v5H2zM9 9h5v5H9z" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
-            <?= $mplusBack ? 'Meny i M+' : 'Meny' ?>
-        </a>
-<?php foreach ($mplusBack ? [] : $site['pages'] as $s => $p): ?>
-        <a href="?side=<?= $e($s) ?>"<?= $s === $slug ? ' aria-current="page"' : '' ?>><?= $e($p['title']) ?></a>
-<?php endforeach; ?>
-    </nav>
 <?php if ($page): ?>
-    <button type="button" class="link-btn help-link" id="help-open" aria-haspopup="dialog">Hva er STL og PDF?</button>
+    <a class="menu-btn" href="<?= $e($menuHref) ?>" title="<?= $e($menuTitle) ?>">
+        <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 2h5v5H2zM9 2h5v5H9zM2 9h5v5H2zM9 9h5v5H9z" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
+        <?= $mplusBack ? 'Meny i M+' : 'Meny' ?>
+    </a>
+    <h1><?= $e($page['h1']) ?></h1>
+<?php else: ?>
+    <span class="menu-brand"><img src="assets/mplus-logo.svg" alt="M+" width="43" height="32"> <span class="brand">M+ <span class="brand-3d">3D</span></span></span>
+    <h1>Velg modell</h1>
 <?php endif; ?>
+    <a class="help-btn" href="<?= $e($helpHref) ?>" target="_blank" rel="noopener" title="Slik bruker du STL- og PDF-filene (åpnes i ny fane)">
+        <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><circle cx="9" cy="9" r="7.6" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M6.9 7.1a2.2 2.2 0 1 1 3 2c-.6.3-.9.7-.9 1.3v.4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="9" cy="13.2" r="1" fill="currentColor"/></svg>
+        Hjelp
+    </a>
 </header>
 
 <?php

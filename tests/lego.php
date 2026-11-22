@@ -320,12 +320,8 @@ test('PDF: oversikt og etiketter i faktisk størrelse, klippelinjer, 100 %-varse
 test('PDF: tekst innenfor arket for ett og tolv rammer', function () use ($lego, $lf, $k) {
     foreach ([1, 12] as $n) {
         $frames = array_fill(0, $n, ['field' => 'label', 'copies' => 4, 'operator' => '+'] + $lf);
-        $c = pdfContent($lego->renderPdf($lego->validate(['frames' => $frames])));
-        preg_match_all('/BT ([\d.\-]+) ([\d.\-]+) Td/', $c, $m, PREG_SET_ORDER);
-        foreach ($m as [, $x, $y]) {
-            $xm = $x / $k;
-            $ym = 297 - $y / $k;
-            ok($xm >= 8 && $xm <= 202 && $ym >= 8 && $ym <= 292, "$n rammer: tekst utenfor arket ($xm, $ym)");
+        foreach (pdfPages($lego->renderPdf($lego->validate(['frames' => $frames]))) as $i => $pg) {
+            ok(!textOutside($pg, 8), "$n rammer side " . ($i + 1) . ': tekst utenfor arket ' . implode(' ', textOutside($pg, 8)));
         }
     }
 });

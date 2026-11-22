@@ -1,6 +1,7 @@
 <?php /** Romfigurer og utbrettingsmodeller. Tas inn av public/index.php. Kontrollene fylles fra API-skjemaet. */ ?>
 <main class="layout">
     <section class="viewer-wrap" aria-label="Forhåndsvisning">
+        <nav id="sheet-tabs" class="sheet-tabs"></nav>
         <div class="viewer-surface solid-views" id="solid-views" data-show="3d">
             <div class="solid-3d">
                 <div id="viewer" class="viewer" tabindex="0" aria-label="3D-modell av romfiguren. Dra for å rotere, rull eller knip for å zoome."></div>
@@ -100,17 +101,3 @@
         </section>
     </aside>
 </main>
-
-<dialog id="help-dialog" class="dialog" aria-labelledby="help-title">
-    <h2 id="help-title">Hva er STL og PDF?</h2>
-    <p><strong>STL</strong> er 3D-modellen. Åpne fila i programmet til 3D-printeren (for eksempel Bambu Studio, PrusaSlicer
-        eller Cura). Figuren står slik den skal skrives ut og trenger ikke støtte, verken massiv eller hul.</p>
-    <p><strong>PDF-nett</strong> er utbrettingsfiguren med nøyaktig de samme målene som 3D-modellen. Skriv den ut i 100 %
-        (faktisk størrelse) og kontroller at kontrollinjen er 50 mm. Klipp langs heltrukne linjer, brett langs stiplede
-        linjer og lim limflikene på innsiden. Store nett deles på flere ark som limes sammen.</p>
-    <p><strong>PDF-oppgaver</strong> har fem sider (undersøk, mål, overflateareal, volum og fra papir til romfigur)
-        tilpasset figuren, målene og vanskelighetsgraden, og en fasit for læreren.</p>
-    <form method="dialog">
-        <button class="btn btn-secondary btn-small" value="close">Lukk</button>
-    </form>
-</dialog>

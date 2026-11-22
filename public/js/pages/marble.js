@@ -9,11 +9,11 @@
  * «Lag stykker» gir et nytt frø, altså nye verdier og stykker.
  */
 import { MarbleViewer } from '../marble-viewer.js';
-import { pageSvg } from '../sheet-svg.js';
 import {
     API, $, setStatus, setFieldError, clearAllErrors, showMessage, hideMessage,
     downloadFrom, bindHelpDialog, bindViewButtons, escapeHtml,
 } from '../ui.js';
+import { initSheets } from '../sheets.js';
 
 const MODEL = 'marble';
 const DEBOUNCE_MS = 300;
@@ -26,7 +26,7 @@ const state = {
     values: {},
     current: null,
     page: 0,
-    show: 'sheets',
+    show: '3d',
     valid: false,
     loading: false,
     seq: 0,
@@ -36,6 +36,12 @@ const state = {
 let viewer = null;
 let viewerReady = null;
 let debounceTimer;
+
+// Arkfaner: kulespillet i 3D og én fane per side i PDF-en.
+const sheets = initSheets({
+    threeD: { label: 'Kulespillet' },
+    docs: [{ key: 'pdf', request: () => ({ url: `${API}?action=pdf&model=${MODEL}`, body: requestBody() }) }],
+});
 
 init().catch((err) => showMessage('Kunne ikke starte appen: ' + err.message));
 
@@ -130,26 +136,7 @@ function bindEvents() {
         schedule(0);
     });
 
-    $('#show-options').addEventListener('change', (e) => {
-        state.show = e.target.value;
-        $('#marble-views').dataset.show = state.show;
-        $('#pager-group').hidden = state.show !== 'sheets';
-        $('#lift-group').hidden = state.show !== '3d';
-        $('#view-hint').textContent = state.show === '3d'
-            ? 'Dra for å rotere · rull eller knip for å zoome · arket i 3D er hullarket for siden som er valgt'
-            : 'Forhåndsvisningen viser nøyaktig de samme sidene som PDF-en. Hullarket skrives ut i 100 % og klippes til 160 × 250 mm.';
-        if (state.show === '3d') show3d();
-    });
     $('#lift-board').addEventListener('change', (e) => viewer?.setLifted(e.target.checked));
-
-    $('#page-prev').addEventListener('click', () => selectPage(state.page - 1));
-    $('#page-next').addEventListener('click', () => selectPage(state.page + 1));
-    $('#page-thumbs').addEventListener('click', (e) => {
-        const b = e.target.closest('[data-page]');
-        if (b) selectPage(Number(b.dataset.page));
-    });
-    $('#page-view').addEventListener('keydown', pageKeys);
-    $('#page-thumbs').addEventListener('keydown', pageKeys);
 
     $('#download-pdf').addEventListener('click', () =>
         downloadFrom(`${API}?action=pdf&model=${MODEL}&download=1`, pdfName(), $('#download-pdf'), updateButtons, requestBody()));
@@ -163,12 +150,6 @@ function bindEvents() {
     });
 }
 
-function pageKeys(e) {
-    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') selectPage(state.page + 1);
-    else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') selectPage(state.page - 1);
-    else return;
-    e.preventDefault();
-}
 
 function checked(sel) {
     return [...document.querySelectorAll(`${sel} input:checked`)].map((el) => el.value);
@@ -232,8 +213,7 @@ async function refresh() {
         state.page = same >= 0 ? same : Math.min(state.page, data.pages.length - 1);
         hideMessage();
         if (data.warnings?.length) showMessage(data.warnings.join(' '), 'warn');
-        renderThumbs();
-        renderPage();
+        show3d();
         updateInfo();
         setStatus(null);
     } catch (err) {
@@ -252,32 +232,6 @@ async function refresh() {
 
 /* ---------------------------------------------------------------- Visning */
 
-function renderThumbs() {
-    const pages = state.current.pages;
-    $('#page-thumbs').innerHTML = pages.map((p, i) =>
-        `<button type="button" class="page-thumb" role="option" data-page="${i}" aria-selected="${i === state.page}" title="${escapeHtml(p.label)}">`
-        + `${pageSvg(p)}<span>${escapeHtml(p.label)}</span></button>`).join('');
-}
-
-function selectPage(i) {
-    if (!state.current) return;
-    const n = state.current.pages.length;
-    state.page = Math.max(0, Math.min(n - 1, i));
-    document.querySelectorAll('.page-thumb').forEach((b) => b.setAttribute('aria-selected', String(Number(b.dataset.page) === state.page)));
-    document.querySelector(`.page-thumb[data-page="${state.page}"]`)?.scrollIntoView({ block: 'nearest' });
-    renderPage();
-}
-
-function renderPage() {
-    const pages = state.current.pages;
-    const p = pages[state.page];
-    $('#page-view').innerHTML = pageSvg(p);
-    $('#page-label').textContent = `${state.page + 1} av ${pages.length}`;
-    $('#page-prev').disabled = state.page === 0;
-    $('#page-next').disabled = state.page === pages.length - 1;
-    if (viewer) updateSheet3d();
-}
-
 function updateInfo() {
     const d = state.current;
     const v = state.values;
@@ -295,6 +249,7 @@ function updateInfo() {
 
 function updateButtons() {
     $('#download-pdf').disabled = !(state.valid && !state.loading && state.current);
+    sheets.refresh();
 }
 
 /* --------------------------------------------------------------------- 3D */

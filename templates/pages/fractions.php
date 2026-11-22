@@ -1,6 +1,7 @@
 <?php /** Brøksirklene. Tas inn av public/index.php. Kontrollene fylles fra API-skjemaet. */ ?>
 <main class="layout">
     <section class="viewer-wrap" aria-label="3D-forhåndsvisning">
+        <nav id="sheet-tabs" class="sheet-tabs"></nav>
         <div class="viewer-surface">
             <div id="viewer" class="viewer" tabindex="0" aria-label="3D-modell av brøkbrikkene. Dra for å rotere, rull eller knip for å zoome."></div>
             <div class="view-buttons" role="group" aria-label="Velg visning">
@@ -74,8 +75,8 @@
         <div id="message" class="message" role="alert" hidden></div>
 
         <div class="downloads">
-            <button type="button" id="download-zip" class="btn btn-primary" disabled>
-                <span class="btn-title">Last ned alle STL (ZIP)</span><span class="btn-sub" id="zip-sub">Én fil per brøk og oversikt over antall</span>
+            <button type="button" id="download-all" class="btn btn-primary" disabled>
+                <span class="btn-title">Last ned alle STL-filene</span><span class="btn-sub" id="all-sub">Én STL-fil per brøk</span>
             </button>
             <button type="button" id="download-pdf" class="btn btn-secondary" disabled>
                 <span class="btn-title">Last ned PDF</span><span class="btn-sub">Oversikt, oppgaver og arbeidsflate</span>
@@ -83,17 +84,3 @@
         </div>
     </aside>
 </main>
-
-<dialog id="help-dialog" class="dialog" aria-labelledby="help-title">
-    <h2 id="help-title">Hva er STL og PDF?</h2>
-    <p><strong>STL</strong> er 3D-modellen. Hver brøk har én STL-fil med én brikke. Åpne fila i programmet
-        til 3D-printeren (for eksempel Bambu Studio, PrusaSlicer eller Cura) og skriv ut så mange eksemplarer
-        som står i lista. ZIP-fila har alle STL-filene og en oversikt over antall.
-        Brikkene ligger flatt og trenger ikke support.</p>
-    <p><strong>PDF-en</strong> har fire sider: oversikt over settet, oppgaver der elevene sammenligner brøker,
-        oppgaver med likeverdige brøker og en arbeidsflate med sirkler i full størrelse.
-        Skriv ut med «Faktisk størrelse» / 100 %, ikke «Tilpass til side».</p>
-    <form method="dialog">
-        <button class="btn btn-secondary btn-small" value="close">Lukk</button>
-    </form>
-</dialog>

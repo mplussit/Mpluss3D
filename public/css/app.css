@@ -1031,3 +1031,115 @@ p { margin: 0; }
 .app-fixed .marble-views { display: grid; grid-template-rows: minmax(0, 1fr); }
 .app-fixed .marble-3d, .app-fixed .marble-sheets { height: 100%; min-height: 0; }
 .app-fixed .marble-views .viewer { height: 100%; min-height: 0; }
+
+/* ------------------------------------------------------------ Toppfelt og arkfaner (nov. 2026)
+   Toppfeltet: menyknapp til venstre, sidetittel, hjelp-knapp til høyre.
+   Under det: arkfaner over forhåndsvisningen, først 3D-visningene og så én
+   fane per side i PDF-en (js/sheets.js). */
+.topbar { gap: 16px; }
+.topbar h1 { flex: 1 1 auto; min-width: 0; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.menu-btn, .help-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex: none;
+    min-height: 36px;
+    padding: 0 16px;
+    background: var(--paper);
+    color: var(--ink);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    font: 600 14px var(--font-body);
+    text-decoration: none;
+    white-space: nowrap;
+}
+.menu-btn:hover, .help-btn:hover { border-color: var(--ink); }
+.help-btn { margin-left: auto; }
+.menu-brand { display: inline-flex; align-items: center; gap: 10px; flex: none; }
+.menu-brand img { height: 32px; width: auto; }
+.menu-brand .brand { font-size: 20px; }
+
+.app-fixed .topbar { flex-wrap: nowrap; min-height: 56px; gap: 16px; }
+.app-fixed .topbar h1 { order: 0; font-size: 19px; }
+.app-fixed .help-btn { order: 0; margin-left: auto; font-size: 14px; }
+
+.sheet-tabs {
+    display: flex;
+    align-items: flex-end;
+    gap: 2px;
+    flex: none;
+    min-height: 36px;
+    margin: 0 28px;
+    padding: 0 2px;
+    border-bottom: 1px solid var(--line);
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: thin;
+}
+.sheet-group {
+    align-self: center;
+    flex: none;
+    padding: 0 6px 0 4px;
+    font: 700 11px var(--font-body);
+    letter-spacing: .08em;
+    color: var(--ink-2);
+}
+.sheet-group-pdf { margin-left: 14px; padding-left: 14px; border-left: 1px solid var(--line); }
+.sheet-tab {
+    flex: none;
+    max-width: 150px;
+    min-height: 32px;
+    padding: 0 10px;
+    margin-bottom: -1px;
+    background: transparent;
+    color: var(--ink-2);
+    border: 1px solid transparent;
+    border-bottom: 0;
+    border-radius: var(--radius-ctl) var(--radius-ctl) 0 0;
+    font: 600 13px var(--font-body);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: pointer;
+}
+.sheet-tab:hover { color: var(--ink); background: var(--paper); }
+.sheet-tab[aria-selected="true"] {
+    color: var(--ink);
+    background: var(--paper);
+    border-color: var(--line);
+    box-shadow: inset 0 3px 0 var(--orange);
+}
+.sheet-tab:focus-visible { outline-offset: -2px; }
+.sheet-loading { align-self: center; flex: none; padding: 0 10px; font-size: 13px; color: var(--ink-2); }
+
+.viewer-wrap[data-tab="pdf"] > .viewer-surface,
+.viewer-wrap[data-tab="pdf"] > .viewer-controls,
+.viewer-wrap[data-tab="pdf"] > .viewer-info { display: none; }
+.viewer-wrap > .sheet-tabs + * { margin-top: 0; }
+
+.sheet-pane { display: flex; flex-direction: column; min-height: 0; }
+.sheet-pane[hidden] { display: none; }
+.sheet-stage {
+    flex: 1 1 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 0;
+    height: 70vh;
+    padding: 12px;
+    background: #e4ded2;
+    border-radius: 0 0 var(--radius-paper) var(--radius-paper);
+    overflow: hidden;
+}
+.sheet-canvas { display: block; background: #fff; box-shadow: var(--shadow-paper); }
+.sheet-canvas[hidden] { display: none; }
+.sheet-note { margin: auto; font-size: 15px; color: var(--ink-2); text-align: center; }
+.sheet-note[hidden] { display: none; }
+.sheet-stage .sheet-note { margin: 0; }
+.sheet-hint { margin-top: 6px; }
+
+.app-fixed .sheet-tabs { margin: 0 22px; }
+.app-fixed .layout { padding-top: 12px; }
+.app-fixed .viewer-wrap > .sheet-pane { flex: 1 1 0; }
+.sheet-stage { border-radius: var(--radius-paper); }
+.app-fixed .sheet-stage { height: auto; }

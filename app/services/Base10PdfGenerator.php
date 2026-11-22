@@ -80,7 +80,7 @@ final class Base10PdfGenerator extends WorksheetPdf
         $p = $this->p;
         $parts = $this->model->parts($p);
         $W = $this->contentW();
-        $y = $this->header(1, 'Base 10 – plassverdimateriell', sprintf(
+        $y = $this->header(1, 'Base 10 – plassverdimateriell', orientation: 'P', tab: 'Oversikt', lead: sprintf(
             'Klosser til 3D-printing som viser titallsystemet. Alle klossene er bygd av samme enhet (%s mm), '
             . 'så ti enere er like lange som en tier, ti tiere like store som en hundrer, og ti hundrere like store som en tusener.',
             Base10Model::fmt($p['unit'])

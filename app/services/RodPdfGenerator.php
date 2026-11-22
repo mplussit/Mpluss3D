@@ -94,7 +94,7 @@ final class RodPdfGenerator extends WorksheetPdf
         $p = $this->p;
         $W = $this->contentW();
         $u = RodModel::fmt($p['unit']);
-        $y = $this->header(1, 'Tallstaver – lærerveiledning', sprintf(
+        $y = $this->header(1, 'Tallstaver – lærerveiledning', orientation: 'P', tab: 'Lærerveiledning', lead: sprintf(
             'Staver i opptil ti lengder til 3D-printing. Stav 1 er en kube på %1$s × %1$s × %1$s mm, og stav n er n ganger så lang. '
             . 'Alle stavene har samme tverrsnitt og plane ender, så to staver lagt ende mot ende er nøyaktig like lange som summen.', $u
         ));

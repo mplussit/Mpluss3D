@@ -1,6 +1,7 @@
 <?php /** Regn med Lego. Tas inn av public/index.php. Kontrollene fylles fra API-skjemaet. */ ?>
 <main class="layout">
     <section class="viewer-wrap" aria-label="Forhåndsvisning">
+        <nav id="sheet-tabs" class="sheet-tabs"></nav>
         <div class="viewer-surface">
             <div id="viewer" class="viewer" tabindex="0" aria-label="3D-modell av rammen. Dra for å rotere, rull eller knip for å zoome."></div>
             <div class="view-buttons" role="group" aria-label="Velg retning">
@@ -127,8 +128,8 @@
             <button type="button" id="download-stl" class="btn btn-primary" disabled>
                 <span class="btn-title">Last ned STL for valgt ramme</span><span class="btn-sub" id="stl-sub">Én ramme</span>
             </button>
-            <button type="button" id="download-zip" class="btn btn-secondary" disabled>
-                <span class="btn-title">Last ned alle rammer (ZIP)</span><span class="btn-sub" id="zip-sub">Én STL per ramme og en oversikt</span>
+            <button type="button" id="download-all" class="btn btn-secondary" disabled>
+                <span class="btn-title">Last ned alle STL-filene</span><span class="btn-sub" id="all-sub">Én STL-fil per ramme</span>
             </button>
             <button type="button" id="download-pdf" class="btn btn-secondary" disabled>
                 <span class="btn-title">Last ned PDF</span><span class="btn-sub" id="pdf-sub">Oversikt og etiketter i faktisk størrelse</span>
@@ -137,16 +138,3 @@
         <p class="hint panel-hint">LEGO® er et varemerke for LEGO-gruppen, som ikke står bak eller godkjenner M+ 3D.</p>
     </aside>
 </main>
-
-<dialog id="help-dialog" class="dialog" aria-labelledby="help-title">
-    <h2 id="help-title">Hva er STL og PDF?</h2>
-    <p><strong>STL</strong> er 3D-modellen. Hver ramme har sin egen STL-fil (for eksempel <code>lego-ramme-01-4x4-16.stl</code>).
-        Åpne den i programmet til 3D-printeren og skriv den ut slik den ligger. Ingen støtte trengs. ZIP-fila har alle rammene.</p>
-    <p><strong>PDF-en</strong> har en oversikt over rammene og regnestykket, og papiretiketter i faktisk størrelse til
-        rammer med etikettfelt. Skriv den ut i 100 % og kontroller linjalen på 100 mm.</p>
-    <p><strong>Passform:</strong> én knottplass er 8 × 8 mm, og klaringen (standard 0,2 mm per side) gir litt luft.
-        Passformen er uprøvd til du har testet en ramme med ekte klosser. Skriv ut én ramme først og juster klaringen ved behov.</p>
-    <form method="dialog">
-        <button class="btn btn-secondary btn-small" value="close">Lukk</button>
-    </form>
-</dialog>

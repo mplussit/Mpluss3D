@@ -1,6 +1,7 @@
 <?php /** Terninggeneratoren. Tas inn av public/index.php. */ ?>
 <main class="layout">
     <section class="viewer-wrap" aria-label="3D-forhåndsvisning">
+        <nav id="sheet-tabs" class="sheet-tabs"></nav>
         <div class="viewer-surface">
             <div id="viewer" class="viewer" tabindex="0" aria-label="3D-modell. Dra for å rotere, rull eller knip for å zoome."></div>
             <div class="view-buttons" role="group" aria-label="Velg visning">
@@ -59,15 +60,3 @@
         </div>
     </aside>
 </main>
-
-<dialog id="help-dialog" class="dialog" aria-labelledby="help-title">
-    <h2 id="help-title">Hva er STL og PDF?</h2>
-    <p><strong>STL</strong> er 3D-modellen. Åpne den i programmet til 3D-printeren
-        (for eksempel Bambu Studio, PrusaSlicer eller Cura) og skriv ut.
-        Terningen kan printes uten support. Vi anbefaler 0,4 mm dyse og 0,2 mm laghøyde.</p>
-    <p><strong>PDF-dekor</strong> er et ark med seks etiketter som passer på sidene av terningen.
-        Skriv ut med «Faktisk størrelse» / 100 %, ikke «Tilpass til side».</p>
-    <form method="dialog">
-        <button class="btn btn-secondary btn-small" value="close">Lukk</button>
-    </form>
-</dialog>

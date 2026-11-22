@@ -9,10 +9,11 @@
 import { RodsViewer } from '../rods-viewer.js';
 import {
     API, $, fieldControl, setStatus, setFieldError, clearFieldError, clearAllErrors,
-    showMessage, hideMessage, downloadFrom, bindHelpDialog, bindViewButtons, webglMissing,
+    showMessage, hideMessage, downloadFrom, downloadAll, bindHelpDialog, bindViewButtons, webglMissing,
     fmt, escapeHtml, CHECK_ICON, DOWNLOAD_ICON,
 } from '../ui.js';
 import { partitions, showcase, sumText, parseTarget } from '../rod-combos.js';
+import { initSheets } from '../sheets.js';
 
 const MODEL = 'rods';
 const DEBOUNCE_MS = 350;
@@ -39,6 +40,12 @@ const state = {
 
 let viewer;
 let debounceTimer;
+
+// Arkfaner: 3D-visningene og én fane per side i PDF-en.
+const sheets = initSheets({
+    threeD: { group: '#mode-options' },
+    docs: [{ key: 'pdf', request: () => ({ url: `${API}?${query('pdf')}` }) }],
+});
 
 init().catch((err) => showMessage('Kunne ikke starte appen: ' + err.message));
 
@@ -235,8 +242,8 @@ function bindEvents() {
         const part = b && state.current?.parts.find((p) => p.id === b.dataset.download);
         if (part) downloadFrom(`${part.stl_url}&download=1`, part.filename, b, updateButtons);
     });
-    $('#download-zip').addEventListener('click', () =>
-        downloadFrom(`${API}?${query('zip')}`, `${baseName()}.zip`, $('#download-zip'), updateButtons));
+    $('#download-all').addEventListener('click', () =>
+        downloadAll(state.current?.parts ?? [], $('#download-all'), updateButtons));
     $('#download-pdf').addEventListener('click', () =>
         downloadFrom(`${API}?${query('pdf')}`, `${baseName()}.pdf`, $('#download-pdf'), updateButtons));
 }
@@ -433,14 +440,15 @@ function renderPrintList(data) {
     $('#print-total').textContent = `${m.total_pieces} staver · ca. ${grams(m.material_g.print)} PLA`;
     $('#material-hint').textContent = `Filament er et overslag for 2 vegger og 15 % fyll. Alle stavene etter hverandre `
         + `blir ${m.total_length} enheter (${fmt(Math.round(m.total_length * data.params.unit) / 10)} cm).`;
-    $('#zip-sub').textContent = `${data.parts.length} ${data.parts.length === 1 ? 'fil' : 'filer'}, parametere og utskriftsliste`;
+    $('#all-sub').textContent = `${data.parts.length} ${data.parts.length === 1 ? 'STL-fil' : 'STL-filer'}, én per stavlengde`;
 }
 
 function updateButtons() {
     const ready = state.valid && !state.generating && !!state.current;
-    $('#download-zip').disabled = !ready;
+    $('#download-all').disabled = !ready;
     $('#download-pdf').disabled = !ready;
     document.querySelectorAll('#print-list [data-download]').forEach((b) => (b.disabled = !ready));
+    sheets.refresh();
 }
 
 function grams(g) {

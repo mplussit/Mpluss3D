@@ -44,8 +44,8 @@ final class FractionPdfGenerator extends WorksheetPdf
     {
         $pdf = $this->pdf;
         $parts = $this->model->parts($this->p);
-        $W = self::PAGE_W - 2 * self::M;
-        $y = $this->header(1, 'Brøksirkler', sprintf(
+        $W = $this->contentW();
+        $y = $this->header(1, 'Brøksirkler', orientation: 'P', tab: 'Oversikt', lead: sprintf(
             'Et sett med brøkbrikker til 3D-printing. Alle brikkene har samme diameter (%s mm), '
             . 'så brøker fra ulike sett kan sammenlignes direkte.',
             FractionModel::fmt($this->p['diameter'])
@@ -158,7 +158,7 @@ final class FractionPdfGenerator extends WorksheetPdf
 
         // --- Innstillinger (står også i bunnteksten, så den kan droppes ved plassmangel)
         $y += 2;
-        if ($y + 15 > self::BOTTOM) {
+        if ($y + 15 > $this->bottom()) {
             $this->footer();
             return;
         }
@@ -203,16 +203,18 @@ final class FractionPdfGenerator extends WorksheetPdf
         $y = $this->header(3, 'Likeverdige brøker',
             'To brøker er likeverdige når de dekker like mye av sirkelen. Legg brikkene oppå hverandre og finn tallet som mangler. '
             . 'Fargelegg like mye av sirkelen til høyre.');
-        $W = self::PAGE_W - 2 * self::M;
-        $cellW = $W / 2;
-        $cellH = 52.0;
-        $r = 13.0;
+        $W = $this->contentW();
+        // Liggende: tre ruter i bredden og litt lavere ruter, så det blir plass til flere.
+        $cols = $this->landscape() ? 3 : 2;
+        $cellW = $W / $cols;
+        $cellH = $this->landscape() ? 47.0 : 52.0;
+        $r = $this->landscape() ? 12.0 : 13.0;
         foreach ($eq as $i => $e) {
-            $col = $i % 2;
-            $row = intdiv($i, 2);
+            $col = $i % $cols;
+            $row = intdiv($i, $cols);
             $x0 = self::M + $col * $cellW;
             $y0 = $y + $row * $cellH;
-            if ($y0 + $cellH > self::BOTTOM) {
+            if ($y0 + $cellH > $this->bottom()) {
                 break;
             }
             $pdf->SetDrawColor(217, 210, 196);
@@ -227,7 +229,7 @@ final class FractionPdfGenerator extends WorksheetPdf
             $pdf->SetTextColor(...self::INK);
             $pdf->TextCentered($x0 + $cellW / 2, $cy + 2, '=');
             $tw = $this->tokensWidth($e['tokens'], 13);
-            $this->drawTokens($e['tokens'], $x0 + $cellW / 2 - $tw / 2, $cy + $r + 10, 13);
+            $this->drawTokens($e['tokens'], $x0 + $cellW / 2 - $tw / 2, $cy + $r + ($this->landscape() ? 9 : 10), 13);
         }
         $this->footer();
     }
@@ -238,8 +240,8 @@ final class FractionPdfGenerator extends WorksheetPdf
     {
         $pdf = $this->pdf;
         $y = $this->header(4, 'Arbeidsflate',
-            'Legg brikkene på sirklene. Skriv brøkuttrykket du har laget på linjene, for eksempel 1/4 + 1/4 = 1/2.');
-        $W = self::PAGE_W - 2 * self::M;
+            'Legg brikkene på sirklene. Skriv brøkuttrykket du har laget på linjene, for eksempel 1/4 + 1/4 = 1/2.', 'P');
+        $W = $this->contentW();
         $D = (float) $this->p['diameter'];
         $top = $y + 2;
         $bottom = 262.0;                       // over linjalen

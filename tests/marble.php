@@ -185,14 +185,16 @@ test('kulespill: alt ligger innenfor A4 og over bunnteksten, og teksten i hullen
         $built = $sh->build();
         foreach ($allItems($built['pages']) as $pi => $it) {
             $label = $built['pages'][$pi]['label'];
+            $PW = $built['pages'][$pi]['w'];
+            $PH = $built['pages'][$pi]['h'];
             if ($it['k'] === 'text') {
                 $w = $sh->tw($it['t'], $it['sz'], $it['b']);
                 $x0 = match ($it['a']) { 'C' => $it['x'] - $w / 2, 'R' => $it['x'] - $w, default => $it['x'] };
-                ok($x0 >= 8 && $x0 + $w <= 202, "$label: «{$it['t']}» går utenfor arket ($x0 + $w)");
-                ok($it['y'] <= 292 && $it['y'] - $it['sz'] >= 5, "$label: «{$it['t']}» utenfor arket i høyden");
-                ok($it['y'] < 285 || $it['sz'] <= 2.6, "$label: «{$it['t']}» i bunnteksten");
+                ok($x0 >= 8 && $x0 + $w <= $PW - 8, "$label: «{$it['t']}» går utenfor arket ($x0 + $w)");
+                ok($it['y'] <= $PH - 5 && $it['y'] - $it['sz'] >= 5, "$label: «{$it['t']}» utenfor arket i høyden");
+                ok($it['y'] < $PH - 12 || $it['sz'] <= 2.6, "$label: «{$it['t']}» i bunnteksten");
             } elseif ($it['k'] === 'rect') {
-                ok($it['x'] >= 8 && $it['x'] + $it['w'] <= 202 && $it['y'] >= 5 && $it['y'] + $it['h'] <= 278, "$label: rute utenfor");
+                ok($it['x'] >= 8 && $it['x'] + $it['w'] <= $PW - 8 && $it['y'] >= 5 && $it['y'] + $it['h'] <= $PH - 19, "$label: rute utenfor");
             }
         }
         // Teksten i hullene ligger innenfor content_diameter.

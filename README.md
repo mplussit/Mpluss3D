@@ -69,7 +69,7 @@ mplus-3d/
 │       ├── solids-viewer.js        SolidViewer: romfigur med flater, kanter og hjørner fra geometrimodellen
 │       ├── lego-viewer.js          LegoViewer: valgt ramme / alle rammer, klosser som illustrasjon
 │       ├── marble-viewer.js        MarbleViewer: kulespillet på bunnen, med hullarket som tekstur
-│       ├── sheet-svg.js            Kulespill: én side fra serveren som SVG (samme elementer som PDF-en)
+│       ├── sheet-svg.js            Kulespill: én side fra serveren som SVG (brukes ikke lenger, se sheets.js)
 │       ├── net-svg.js              Utbrettingsnettet som SVG (samme nett og A4-plassering som PDF-en)
 │       └── pages/
 │           ├── menu.js             Menyen
@@ -173,7 +173,7 @@ Startsiden (`public/index.php` uten parameter) er en meny som fungerer som menye
 * Ett klikk på en side viser tittel, forhåndsbilde og beskrivelse til høyre.
 * Dobbeltklikk, Enter eller klikk på bildet åpner siden. Piltastene flytter valget.
 * Sist valgte side og tema huskes i nettleseren.
-* På modellsidene har toppfeltet lenkene **Meny | Terning | Brøksirkler | Base 10 | Tallstaver | Romfigurer | Regn med Lego | Kulespill**. Logoen fører også tilbake til menyen.
+* På modellsidene har toppfeltet menyknappen, sidetittelen og Hjelp-knappen (se «Toppfelt, arkfaner og forhåndsvisning av PDF-en»).
 
 Sidene, gruppene og temaene står i `app/config/pages.php`. Forhåndsbildene (`public/assets/previews/`) er skjermbilder av 3D-visningen.
 
@@ -191,10 +191,23 @@ M+ har en fast flate på 840 × 640 som forstørres jevnt til vinduet (skala 1�
 M+ 3D er også et produkt i produktvelgeren i M+ (fag `3d`, fra `menu__24.js` i M+-repoet):
 
 * Sidene står i `o_pages` med `subject = "3d"`. `page` er det samme som `side` her (for eksempel `terning`), og tittel og beskrivelse er UI-teksten `<page>3d`. Radene og tekstene ligger i `docs/mpluss3d-o_pages.sql` i M+-repoet.
-* Når man åpner en side, sender M+ brukeren til `index.php?side=<page>&tilbake=<adressen til M+-menyen>`. Logoen og «Meny i M+» fører da tilbake dit, og lenkene til de andre modellene skjules.
+* Når man åpner en side, sender M+ brukeren til `index.php?side=<page>&tilbake=<adressen til M+-menyen>`. Menyknappen heter da «Meny i M+» og fører tilbake dit.
 * `tilbake` godtas bare for http(s)-adresser på vertene i `mplus_return_hosts` i `app/config/config.php` (eller i miljøvariabelen `MPLUS_RETURN_HOSTS`).
 * Forhåndsbildene i M+ er WebP 900 × 670 i `www/media/task_previews/{nbNO,nnNO}/<page>.webp`, laget av bildene her.
 * En ny modell må derfor legges inn både i `pages.php` og som rad og tekst i M+.
+
+### Toppfelt, arkfaner og forhåndsvisning av PDF-en
+
+* **Toppfeltet** har menyknappen helt til venstre («Meny i M+» når siden er åpnet fra M+, ellers «Meny»), sidetittelen og en **Hjelp**-knapp helt til høyre. Hjelp åpner `help_url` fra `app/config/config.php` (eller miljøvariabelen `M3D_HELP_URL`) i en ny fane, med `#<side>` på modellsidene (for eksempel `#base10`).
+* **Arkfanene** under toppfeltet (`public/js/sheets.js`) deler siden i 3D-faner og PDF-faner. 3D-fanene er visningsvalgene siden har fra før (for eksempel «Samlet | Enkeltobjekt | Tallbygger»). Radiogruppen skjules, og en fane velger det tilsvarende valget.
+* **PDF-fanene** er én fane per side i PDF-en(e). Forhåndsvisningen henter den samme PDF-en som nedlastingen (`api.php?action=pdf`) og tegner siden med pdf.js (fra jsDelivr, som three.js). Det er altså nøyaktig den fila læreren får. PDF-ene hentes på nytt når innstillingene endres.
+* **Fanenavnene** settes i PHP med `LabelPdf::SetPageTitle()` (i `WorksheetPdf::header()` er det tittelen, eller `tab:`) og sendes i svarhodet `X-Page-Titles` (URL-kodet JSON).
+* **Ingen ZIP i grensesnittet.** «Last ned alle STL-filene» laster ned hver del som en vanlig .stl-fil, den ene etter den andre (`downloadAll()` i `public/js/ui.js`). Hver rad i utskriftslista har også sin egen STL-knapp. Nettleseren kan spørre én gang om siden får laste ned flere filer. `api.php?action=zip` finnes fortsatt, men brukes ikke av sidene.
+* En ny modellside trenger `<nav id="sheet-tabs" class="sheet-tabs"></nav>` øverst i `.viewer-wrap` og et kall til `initSheets()` i sidens skript, med `sheets.refresh()` etter hver endring.
+
+### Liggende oppgaveark
+
+Oppgavesidene er liggende A4, som i M+ matematikk. `WorksheetPdf::header()` lager liggende sider som standard, og `drawSections()` fordeler oppgavene i to spalter. Lærerveiledningene (side 1), sider i målestokk 1:1 (arbeidsflate, etiketter, utbrettingsnett, hullarket i kulespillet og terningdekoren) er stående. I kulespillet er verdiark, oppgaver og fasit liggende med to spalter.
 
 ## Serveravhengigheter
 
@@ -825,7 +838,7 @@ Læreren velger:
 
 ### Forhåndsvisning = PDF
 
-`MarbleSheets` legger ut alle sidene som enkle tegneelementer i mm (rektangel, linje, sirkel, mangekant, tekst med størrelse og justering). Tekstbredder måles med FPDFs Helvetica-metrikk. `describe()` sender elementene til nettleseren, der `sheet-svg.js` tegner dem som SVG, og `MarblePdf` tegner nøyaktig de samme elementene i PDF-en. Forhåndsvisningen og PDF-en kan derfor ikke bli forskjellige. Minus skrives som tankestrek (–), som har samme bredde som sifrene og finnes i PDF-fontene.
+`MarbleSheets` legger ut alle sidene som enkle tegneelementer i mm (rektangel, linje, sirkel, mangekant, tekst med størrelse og justering). Tekstbredder måles med FPDFs Helvetica-metrikk. `MarblePdf` tegner elementene i PDF-en, og PDF-fanene viser den samme PDF-en (se «Toppfelt, arkfaner og forhåndsvisning av PDF-en»). Hullarket er stående; verdiark, oppgaver og fasit er liggende med to spalter. Minus skrives som tankestrek (–), som har samme bredde som sifrene og finnes i PDF-fontene.
 
 I **3D-visningen** står spillet på bunnen, og hullarket for siden som er valgt, er lagt som tekstur på arket. «Løft spillet og se arket» løfter spillet 45 mm.
 

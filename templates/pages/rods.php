@@ -1,6 +1,7 @@
 <?php /** Tallstaver. Tas inn av public/index.php. Kontrollene fylles fra API-skjemaet. */ ?>
 <main class="layout">
     <section class="viewer-wrap" aria-label="3D-forhåndsvisning">
+        <nav id="sheet-tabs" class="sheet-tabs"></nav>
         <div class="viewer-surface">
             <div id="viewer" class="viewer" tabindex="0" aria-label="3D-modell av tallstavene. Dra for å rotere, rull eller knip for å zoome."></div>
             <div class="view-buttons" role="group" aria-label="Velg visning">
@@ -103,8 +104,8 @@
         <div id="message" class="message" role="alert" hidden></div>
 
         <div class="downloads">
-            <button type="button" id="download-zip" class="btn btn-primary" disabled>
-                <span class="btn-title">Last ned alle STL (ZIP)</span><span class="btn-sub" id="zip-sub">Én fil per stavlengde, parametere og utskriftsliste</span>
+            <button type="button" id="download-all" class="btn btn-primary" disabled>
+                <span class="btn-title">Last ned alle STL-filene</span><span class="btn-sub" id="all-sub">Én STL-fil per stavlengde</span>
             </button>
             <button type="button" id="download-pdf" class="btn btn-secondary" disabled>
                 <span class="btn-title">Last ned PDF</span><span class="btn-sub">Lærerveiledning, oppgaver og arbeidsark</span>
@@ -112,19 +113,3 @@
         </div>
     </aside>
 </main>
-
-<dialog id="help-dialog" class="dialog" aria-labelledby="help-title">
-    <h2 id="help-title">Hva er STL og PDF?</h2>
-    <p><strong>STL</strong> er 3D-modellen. Hver stavlengde har én STL-fil med én stav (<code>tallstav_01.stl</code> … <code>tallstav_10.stl</code>).
-        Åpne fila i programmet til 3D-printeren (for eksempel Bambu Studio, PrusaSlicer eller Cura) og skriv ut så mange
-        eksemplarer som står i lista. Stavene ligger slik de skal skrives ut og trenger ikke support.
-        ZIP-fila har alle STL-filene, parameterne, utskriftslista og hvilke filamentfarger som trengs.</p>
-    <p><strong>PDF-en</strong> har sju sider: lærerveiledning, «Bygg tall», addisjon, subtraksjon, multiplikasjon og divisjon,
-        brøk og et arbeidsark i full størrelse. Oppgavene bruker bare stavene som er i settet, i det antallet settet har.
-        Oppgaver som trenger staver settet ikke har, er merket «Tegneoppgave».</p>
-    <p><strong>Tallkombinasjoner</strong> viser måter å bygge en lengde fra 2 til 20 på med stavene i settet. Den er bare
-        en visning og lager ingen nye filer.</p>
-    <form method="dialog">
-        <button class="btn btn-secondary btn-small" value="close">Lukk</button>
-    </form>
-</dialog>

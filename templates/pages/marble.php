@@ -1,11 +1,8 @@
-<?php /** Kulespill med ark. Tas inn av public/index.php. Arkene lages av serveren (MarbleSheets) og vises som SVG. */ ?>
+<?php /** Kulespill med ark. Tas inn av public/index.php. Arkene lages av serveren (MarbleSheets) og vises i PDF-fanene. */ ?>
 <main class="layout">
     <section class="viewer-wrap" aria-label="Forhåndsvisning">
-        <div class="viewer-surface marble-views" id="marble-views" data-show="sheets">
-            <div class="marble-sheets">
-                <div id="page-thumbs" class="page-thumbs" role="listbox" aria-label="Sidene i PDF-en"></div>
-                <div id="page-view" class="page-view" aria-live="polite"></div>
-            </div>
+        <nav id="sheet-tabs" class="sheet-tabs"></nav>
+        <div class="viewer-surface marble-views" id="marble-views" data-show="3d">
             <div class="marble-3d">
                 <div id="viewer" class="viewer" tabindex="0" aria-label="3D-modell av kulespillet med bunnen og hullarket. Dra for å rotere, rull eller knip for å zoome."></div>
                 <div class="view-buttons" role="group" aria-label="Velg retning">
@@ -18,22 +15,7 @@
         </div>
 
         <div class="viewer-controls">
-            <div class="control-group">
-                <span class="control-label" id="show-label">Vis</span>
-                <div id="show-options" class="segmented segmented-compact" role="radiogroup" aria-labelledby="show-label">
-                    <label><input type="radio" name="show" value="sheets" checked> Arkene</label>
-                    <label><input type="radio" name="show" value="3d"> Kulespillet i 3D</label>
-                </div>
-            </div>
-            <div class="control-group" id="pager-group">
-                <span class="control-label">Side</span>
-                <div class="pager">
-                    <button type="button" class="btn btn-secondary btn-small" id="page-prev" aria-label="Forrige side">‹</button>
-                    <span id="page-label" class="page-label num">–</span>
-                    <button type="button" class="btn btn-secondary btn-small" id="page-next" aria-label="Neste side">›</button>
-                </div>
-            </div>
-            <div class="control-group" id="lift-group" hidden>
+            <div class="control-group" id="lift-group">
                 <span class="control-label">Arket</span>
                 <label class="check"><input type="checkbox" id="lift-board"> <span>Løft spillet og se arket</span></label>
             </div>
@@ -42,7 +24,7 @@
         <div class="viewer-info">
             <div>
                 <p id="model-info" class="model-info"></p>
-                <p class="hint" id="view-hint">Forhåndsvisningen viser nøyaktig de samme sidene som PDF-en. Hullarket skrives ut i 100 % og klippes til 160 × 250 mm.</p>
+                <p class="hint" id="view-hint">Dra for å rotere · rull eller knip for å zoome · arket i 3D er hullarket til første variant</p>
             </div>
         </div>
     </section>
@@ -159,18 +141,3 @@
         </div>
     </aside>
 </main>
-
-<dialog id="help-dialog" class="dialog" aria-labelledby="help-title">
-    <h2 id="help-title">Hva er STL og PDF?</h2>
-    <p><strong>STL</strong> er 3D-modellene: kulespillet og bunnen. Skriv dem ut slik de ligger i fila. Bunnen har en lomme
-        på 161 × 251 mm der arket legges, og kulespillet settes oppå arket.</p>
-    <p><strong>PDF-en</strong> har arkene. Hullarket skrives ut i 100 % (faktisk størrelse) og klippes langs hjørnemerkene til
-        160 × 250 mm. Kontroller linjen på 100 mm nederst. Innholdet står nøyaktig over de ni hullene i lommene og syns
-        gjennom en klinkekule i glass. Med bokstaver eller symboler følger det med et verdiark. Oppgavearket og fasiten
-        lages ut fra de samme verdiene.</p>
-    <p><strong>Lag stykker</strong> gir nye verdier. Forhåndsvisningen og PDF-en lages alltid fra de samme valgene, så PDF-en
-        blir nøyaktig som det du ser.</p>
-    <form method="dialog">
-        <button class="btn btn-secondary btn-small" value="close">Lukk</button>
-    </form>
-</dialog>

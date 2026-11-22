@@ -9,9 +9,10 @@
  */
 import { LegoViewer } from '../lego-viewer.js';
 import {
-    API, $, setStatus, setFieldError, clearAllErrors, showMessage, hideMessage, downloadFrom,
+    API, $, setStatus, setFieldError, clearAllErrors, showMessage, hideMessage, downloadFrom, downloadAll,
     bindHelpDialog, bindViewButtons, webglMissing, fmt, escapeHtml, CHECK_ICON,
 } from '../ui.js';
+import { initSheets } from '../sheets.js';
 
 const MODEL = 'lego';
 const DEBOUNCE_MS = 300;
@@ -33,6 +34,12 @@ const state = {
 let viewer;
 let debounceTimer;
 let setActiveView = () => {};
+
+// Arkfaner: 3D-visningene og én fane per side i PDF-en.
+const sheets = initSheets({
+    threeD: { group: '#show-options' },
+    docs: [{ key: 'pdf', request: () => ({ url: `${API}?action=pdf&model=${MODEL}`, body: requestBody() }) }],
+});
 
 init().catch((err) => showMessage('Kunne ikke starte appen: ' + err.message));
 
@@ -336,8 +343,8 @@ function bindEvents() {
         const part = state.current?.parts[state.selected];
         if (part) downloadFrom(`${part.stl_url}&download=1`, part.filename, $('#download-stl'), updateButtons);
     });
-    $('#download-zip').addEventListener('click', () =>
-        downloadFrom(`${API}?action=zip&model=${MODEL}`, `${archiveName()}.zip`, $('#download-zip'), updateButtons, requestBody()));
+    $('#download-all').addEventListener('click', () =>
+        downloadAll(state.current?.parts ?? [], $('#download-all'), updateButtons));
     $('#download-pdf').addEventListener('click', () =>
         downloadFrom(`${API}?action=pdf&model=${MODEL}&download=1`, `${archiveName()}-etiketter.pdf`, $('#download-pdf'), updateButtons, requestBody()));
 }
@@ -469,12 +476,13 @@ function updateDims() {
     $('#model-info').innerHTML = `<span class="num">${escapeHtml(i.name)}</span> · ${escapeHtml(part.filename)} · `
         + (ok ? `<span class="valid">${CHECK_ICON}alle rammer er lukkede og målriktige</span>` : '<span class="invalid">kontrollen feilet</span>');
     $('#stl-sub').textContent = `${part.filename} · ca. ${fmt(Math.round(i.material_g))} g PLA`;
-    $('#zip-sub').textContent = `${state.current.parts.length} STL-${state.current.parts.length === 1 ? 'fil' : 'filer'} og en oversikt`;
+    $('#all-sub').textContent = `${state.current.parts.length} ${state.current.parts.length === 1 ? 'STL-fil' : 'STL-filer'}, én per ramme`;
     const labels = state.current.model.labels;
     $('#pdf-sub').textContent = `Oversikt${labels ? ` og ${labels} ${labels === 1 ? 'etikett' : 'etiketter'}` : ''} i faktisk størrelse`;
 }
 
 function updateButtons() {
     const ready = state.valid && !state.generating && !!state.current;
-    for (const id of ['#download-stl', '#download-zip', '#download-pdf']) $(id).disabled = !ready;
+    for (const id of ['#download-stl', '#download-all', '#download-pdf']) $(id).disabled = !ready;
+    sheets.refresh();
 }

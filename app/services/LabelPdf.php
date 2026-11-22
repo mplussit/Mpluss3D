@@ -17,6 +17,33 @@ final class LabelPdf extends FPDF
         $this->SetCompression(true);
     }
 
+    /** @var array<int,string> Kort navn per side (fanene i forhåndsvisningen). */
+    private array $pageTitles = [];
+    /** @var list<string> Sidenavnene i den sist lagde PDF-en. */
+    private static array $lastPageTitles = [];
+
+    /** Kort navn på gjeldende side, vises som fane i forhåndsvisningen. */
+    public function SetPageTitle(string $title): void
+    {
+        $this->pageTitles[$this->PageNo()] = $title;
+    }
+
+    /** Sidenavnene i den sist lagde PDF-en (tom streng når siden ikke har navn). @return list<string> */
+    public static function lastPageTitles(): array
+    {
+        return self::$lastPageTitles;
+    }
+
+    public function Output($dest = '', $name = '', $isUTF8 = false)
+    {
+        $titles = [];
+        for ($i = 1; $i <= $this->PageNo(); $i++) {
+            $titles[] = $this->pageTitles[$i] ?? '';
+        }
+        self::$lastPageTitles = $titles;
+        return parent::Output($dest, $name, $isUTF8);
+    }
+
     /** Konverterer UTF-8 til tegnsettet som FPDFs standardfonter bruker. */
     public static function enc(string $s): string
     {

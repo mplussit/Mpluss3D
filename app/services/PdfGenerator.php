@@ -58,6 +58,7 @@ final class PdfGenerator
         $pdf->SetTitle(LabelPdf::enc(str_replace('{dims}', $dims, $t['title'])));
         $pdf->SetCreator('M+ 3D');
         $pdf->AddPage();
+        $pdf->SetPageTitle('Dekor');
 
         // --- Topptekst --------------------------------------------------------
         $pdf->SetTextColor(20, 20, 20);

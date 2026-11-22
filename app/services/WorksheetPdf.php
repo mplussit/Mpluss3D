@@ -17,7 +17,8 @@ declare(strict_types=1);
  * Underklasser kan legge til egne tokens (f.eks. stablede brøker) ved å
  * overstyre customTokenWidth(), drawCustomToken() og customLineHeight().
  *
- * Alle mål i mm. Sider kan være stående eller liggende A4.
+ * Alle mål i mm. Oppgavesidene er liggende A4 (som i M+ matematikk), med
+ * oppgavene i to spalter. Sider i målestokk 1:1 kan være stående.
  */
 abstract class WorksheetPdf
 {
@@ -67,10 +68,11 @@ abstract class WorksheetPdf
     }
 
     /** Ny side med topptekst, tittel og ingress. Returnerer y under ingressen. */
-    protected function header(int $page, string $title, string $lead, string $orientation = 'P'): float
+    protected function header(int $page, string $title, string $lead, string $orientation = 'L', ?string $tab = null): float
     {
         $pdf = $this->pdf;
         $pdf->AddPage($orientation);
+        $pdf->SetPageTitle($tab ?? $title);
         $W = $this->contentW();
         $pdf->SetFont('Helvetica', 'B', 8);
         $pdf->SetTextColor(...self::ACCENT);
@@ -147,17 +149,57 @@ abstract class WorksheetPdf
 
     /* ================================================== Oppgaveseksjoner */
 
+    /** Liggende side? */
+    protected function landscape(): bool
+    {
+        return $this->pageW() > $this->pageH();
+    }
+
+    /** Spalter for oppgavelister: to på liggende sider, én på stående. */
+    protected function columns(): int
+    {
+        return $this->landscape() ? 2 : 1;
+    }
+
+    protected const COLUMN_GAP = 12.0;
+
+    /** Bredden på én spalte. */
+    protected function columnW(?int $columns = null): float
+    {
+        $n = $columns ?? $this->columns();
+        return ($this->contentW() - ($n - 1) * self::COLUMN_GAP) / $n;
+    }
+
     /**
-     * Tegner seksjoner med nummererte oppgaver. Returnerer y etter siste oppgave.
+     * Tegner seksjoner med nummererte oppgaver. Returnerer y etter siste oppgave
+     * (den laveste y-en i spaltene som er brukt).
+     *
+     * På liggende sider flyter oppgavene i to spalter: når en oppgave ikke får
+     * plass nederst i venstre spalte, fortsetter den øverst i høyre spalte.
      * Oppgaver som ikke får plass, utelates (antallet bør begrenses av den som lager dem).
      *
      * @param list<array{title:string,intro:?string,tasks:list<array{tokens:list<array>}>}> $sections
      */
-    protected function drawSections(array $sections, float $y, int $no = 1): float
+    protected function drawSections(array $sections, float $y, int $no = 1, ?int $columns = null): float
     {
         $pdf = $this->pdf;
-        $W = $this->contentW();
+        $cols = $columns ?? $this->columns();
+        $W = $this->columnW($cols);
         $bottom = $this->bottom();
+        $top = $y;
+        $col = 0;
+        $x = self::M;
+        $maxY = $y;
+        $nextColumn = function () use (&$col, &$x, &$y, &$maxY, $cols, $W, $top): bool {
+            if ($col + 1 >= $cols) {
+                return false;
+            }
+            $maxY = max($maxY, $y);
+            $col++;
+            $x = self::M + $col * ($W + self::COLUMN_GAP);
+            $y = $top;
+            return true;
+        };
         foreach ($sections as $sec) {
             if (!$sec['tasks']) {
                 continue;
@@ -165,45 +207,48 @@ abstract class WorksheetPdf
             // Overskriften tegnes bare hvis minst den første oppgaven får plass under.
             $first = $this->wrapTokens($sec['tasks'][0]['tokens'], $W - 9, 11);
             $headH = 3 + 1.5 + (!empty($sec['intro']) ? 5 : 0) + 3;
-            if ($y + $headH + $this->linesHeight($first) > $bottom) {
+            if ($y + $headH + $this->linesHeight($first) > $bottom
+                && (!$nextColumn() || $y + $headH + $this->linesHeight($first) > $bottom)) {
                 break;
             }
             $y += 3;
             $pdf->SetFont('Helvetica', 'B', 12.5);
             $pdf->SetTextColor(...self::INK);
-            $pdf->TextUtf8(self::M, $y, $sec['title']);
+            $pdf->TextUtf8($x, $y, $sec['title']);
             $y += 1.5;
             if (!empty($sec['intro'])) {
                 $pdf->SetFont('Helvetica', '', 9.5);
                 $pdf->SetTextColor(...self::INK2);
-                $pdf->TextRich(self::M, $y + 4, $sec['intro']);   // også π, √ og ≈
+                $pdf->TextRich($x, $y + 4, $sec['intro']);   // også π, √ og ≈
                 $y += 5;
             }
             $y += 3;
             foreach ($sec['tasks'] as $task) {
                 $lines = $this->wrapTokens($task['tokens'], $W - 9, 11);
                 if ($y + $this->linesHeight($lines) > $bottom) {
-                    break 2;
+                    if (!$nextColumn()) {
+                        break 2;
+                    }
                 }
                 $pdf->SetFont('Helvetica', 'B', 11);
                 $pdf->SetTextColor(...self::ACCENT);
-                $pdf->TextUtf8(self::M, $y + $this->lineHeight($lines[0]) / 2 + 1.4, $no . '.');
+                $pdf->TextUtf8($x, $y + $this->lineHeight($lines[0]) / 2 + 1.4, $no . '.');
                 foreach ($lines as $line) {
                     $lh = $this->lineHeight($line);
-                    $this->drawTokens($line, self::M + 9, $y + $lh / 2, 11);
+                    $this->drawTokens($line, $x + 9, $y + $lh / 2, 11);
                     $y += $lh;
                 }
                 $no++;
             }
             $y += 2;
         }
-        return $y;
+        return max($maxY, $y);
     }
 
     /** Høyden en seksjonsliste vil få, uten å tegne den. */
     protected function sectionsHeight(array $sections): float
     {
-        $W = $this->contentW();
+        $W = $this->columnW();
         $h = 0.0;
         foreach ($sections as $sec) {
             if (!$sec['tasks']) {

@@ -412,11 +412,9 @@ test('PDF-oppgaver: seks A4-sider for alle figurer og nivåer, tekst innenfor ar
             $c = pdfContent($pdf);
             $pages = preg_split('/(?=BT \/F\d+ [\d.]+ Tf ET\s*\n?.*?M\+ 3D)/s', $c);
             eq(6, substr_count($pdf, '/Type /Page') - substr_count($pdf, '/Type /Pages'), "$sh nivå $lv");
-            preg_match_all('/BT ([\d.\-]+) ([\d.\-]+) Td/', $c, $m, PREG_SET_ORDER);
-            foreach ($m as [, $x, $y]) {
-                $xm = $x / $k;
-                $ym = 297 - $y / $k;
-                ok($xm >= 10 && $xm <= 200 && $ym >= 8 && $ym <= 292, "$sh nivå $lv: tekst utenfor arket ($xm, $ym)");
+            foreach (pdfPages($pdf) as $i => $pg) {
+                ok(!textOutside($pg), "$sh nivå $lv side " . ($i + 1) . ': tekst utenfor arket ' . implode(' ', textOutside($pg)));
+                ok($pg['w'] > $pg['h'], "$sh nivå $lv side " . ($i + 1) . ': skal være liggende');
             }
             foreach (['(Undersøk figuren)', '(Mål figuren)', '(Overflateareal)', '(Volum)', '(Fra papir til romfigur)', '(Fasit)'] as $t) {
                 ok(str_contains($c, LabelPdf::enc($t)), "$sh nivå $lv: mangler $t");

@@ -233,6 +233,7 @@ final class SolidNetPdf
         $pdf = $this->pdf;
         $pdf->AddPage($o);
         $this->page++;
+        $pdf->SetPageTitle($this->pages === 1 ? 'Nett' : ($this->page === 1 && $this->plan['mode'] === 'tiles' ? 'Nett – oversikt' : 'Nett-ark ' . ($this->page - 1)));
         [$W] = NetLayout::page($o);
         $m = NetLayout::MARGIN;
         $pdf->SetFont('Helvetica', 'B', 8);

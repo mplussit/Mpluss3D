@@ -14,6 +14,7 @@ import {
     showMessage, hideMessage, downloadFrom, bindHelpDialog, bindViewButtons, webglMissing,
     fmt, escapeHtml, CHECK_ICON,
 } from '../ui.js';
+import { initSheets } from '../sheets.js';
 
 const MODEL = 'solids';
 const DEBOUNCE_MS = 250;
@@ -37,6 +38,15 @@ const state = {
 let viewer;
 let debounceTimer;
 let setActiveView = () => {};
+
+// Arkfaner: 3D-visningene og én fane per side i PDF-en.
+const sheets = initSheets({
+    threeD: { group: '#show-options' },
+    docs: [
+        { key: 'net', request: () => ({ url: `${API}?${query('pdf', 'net')}` }) },
+        { key: 'tasks', request: () => ({ url: `${API}?${query('pdf', 'tasks')}` }) },
+    ],
+});
 
 init().catch((err) => showMessage('Kunne ikke starte appen: ' + err.message));
 
@@ -307,6 +317,7 @@ function updateButtons() {
     const ready = state.valid && !state.generating && !!state.current;
     for (const id of ['#download-stl', '#download-net', '#download-tasks']) $(id).disabled = !ready;
     $('#tasks-sub').textContent = `${state.schema?.choices.level.options[state.level] ?? ''} · fem sider og fasit`;
+    sheets.refresh();
 }
 
 /** Små ikoner til figurvalget. */

@@ -11,6 +11,7 @@ import {
     downloadFrom, bindHelpDialog, bindViewButtons, webglMissing, fmt, escapeHtml, CHECK_ICON,
     setFieldError as setError, clearFieldError,
 } from '../ui.js';
+import { initSheets } from '../sheets.js';
 
 const DEBOUNCE_MS = 350;
 const SIZE_KEYS = ['width', 'height', 'depth'];
@@ -30,6 +31,12 @@ const state = {
 
 let viewer;
 let debounceTimer;
+
+// Arkfaner: 3D-visningene og én fane per side i PDF-en.
+const sheets = initSheets({
+    threeD: { label: 'Terningen' },
+    docs: [{ key: 'pdf', request: () => ({ url: `${API}?${pdfQuery()}` }) }],
+});
 
 init().catch((err) => showMessage('Kunne ikke starte appen: ' + err.message));
 
@@ -229,14 +236,19 @@ async function downloadStl() {
 
 async function downloadPdf() {
     if (!state.current) return;
-    const q = new URLSearchParams({ action: 'pdf', download: '1', decor: state.decor });
-    for (const [k, v] of Object.entries(state.values)) q.set(k, v);
-    q.set('label', labelValue());
+    const q = pdfQuery();
     const name = state.current.filename.replace(/\.stl$/, '-dekor.pdf');
     await downloadFrom(`${API}?${q}`, name, $('#download-pdf'), updateButtons);
 }
 
 /* ------------------------------------------------------------ Hjelpefunksjoner */
+
+function pdfQuery() {
+    const q = new URLSearchParams({ action: 'pdf', download: '1', decor: state.decor });
+    for (const [k, v] of Object.entries(state.values)) q.set(k, v);
+    q.set('label', labelValue());
+    return q;
+}
 
 function labelValue() {
     return state.labelAuto ? 'auto' : String(state.labelSize ?? '');
@@ -246,6 +258,7 @@ function updateButtons() {
     const ready = state.valid && !state.generating && !!state.current;
     $('#download-stl').disabled = !ready;
     $('#download-pdf').disabled = !ready;
+    sheets.refresh();
 }
 
 /** Bredde/høyde/dybde vises som én kontroll («size»). */

@@ -39,6 +39,10 @@ final class MarbleSheets
     private const HOLE_FILL = '#fff3e6';
     private const PT = 25.4 / 72;           // mm per punkt
 
+    /** Gjeldende side: hullarket er stående, oppgaver, verdiark og fasit liggende (som i M+ matematikk). */
+    private float $pw = self::PAGE_W;
+    private float $ph = self::PAGE_H;
+
     private LabelPdf $metrics;
     private array $pages = [];
     private array $warnings = [];
@@ -269,7 +273,7 @@ final class MarbleSheets
         }
         $total = count($this->pages);
         foreach ($this->pages as $i => &$page) {
-            $page['items'][] = $this->text(self::PAGE_W - self::M, 290.5, 'Side ' . ($i + 1) . " av $total", 2.3, false, '#828282', 'R');
+            $page['items'][] = $this->text($page['w'] - self::M, $page['h'] - 6.5, 'Side ' . ($i + 1) . " av $total", 2.3, false, '#828282', 'R');
         }
         unset($page);
         return ['pages' => $this->pages, 'variants' => $variants, 'warnings' => array_values($this->warnings)];
@@ -277,8 +281,24 @@ final class MarbleSheets
 
     private function addPage(string $kind, string $label, ?int $variant, array $items): void
     {
-        $items[] = $this->text(self::M, 290.5, $this->footerText(), 2.3, false, '#828282');
-        $this->pages[] = ['kind' => $kind, 'label' => $label, 'variant' => $variant, 'items' => $items];
+        $items[] = $this->text(self::M, $this->ph - 6.5, $this->footerText(), 2.3, false, '#828282');
+        $this->pages[] = [
+            'kind' => $kind, 'label' => $label, 'variant' => $variant,
+            'o' => $this->pw > $this->ph ? 'L' : 'P', 'w' => $this->pw, 'h' => $this->ph,
+            'items' => $items,
+        ];
+    }
+
+    /** Stående (hullarket, 1:1) eller liggende A4 for sidene som lages etterpå. */
+    private function orient(bool $landscape): void
+    {
+        [$this->pw, $this->ph] = $landscape ? [self::PAGE_H, self::PAGE_W] : [self::PAGE_W, self::PAGE_H];
+    }
+
+    /** Innhold slutter over bunnteksten. */
+    private function bottom(): float
+    {
+        return $this->ph - 21.0;
     }
 
     private function footerText(): string
@@ -292,6 +312,7 @@ final class MarbleSheets
     /** Arket som legges under spillet: 160 × 250 mm med innholdet over hullene. */
     private function holeSheet(array $v, ?int $num): void
     {
+        $this->orient(false);
         $items = [];
         $x0 = self::SHEET_X;
         $y0 = self::SHEET_Y;
@@ -349,7 +370,7 @@ final class MarbleSheets
         $items[] = $this->text($rx + 104, $ry, 'Kontroll: skal være nøyaktig 100 mm', 2.5, false, self::INK2);
 
         $label = 'Hullark' . ($num ? " $num" : '');
-        $this->pages[] = ['kind' => 'holes', 'label' => $label, 'variant' => $num, 'items' => $items];
+        $this->pages[] = ['kind' => 'holes', 'label' => $label, 'variant' => $num, 'o' => 'P', 'w' => $this->pw, 'h' => $this->ph, 'items' => $items];
     }
 
     /** Spillkoordinater (mm) → punkt på A4. */
@@ -382,12 +403,13 @@ final class MarbleSheets
 
     private function valueSheet(array $v, ?int $num): void
     {
+        $this->orient(true);
         $what = $this->p['content'] === 'letters' ? 'bokstav' : 'symbol';
         [$items, $y] = $this->header('Verdiark', $num,
             "Hvert $what i kulespillet har en verdi. Bruk verdiene når du regner ut poengene og løser oppgavene.");
         $cw = 54.0;
         $ch = 34.0;
-        $gap = (self::PAGE_W - 2 * self::M - 3 * $cw) / 2;
+        $gap = ($this->pw - 2 * self::M - 3 * $cw) / 2;
         $y += 2;
         foreach ($v['holes'] as $i => $h) {
             $x = self::M + ($i % 3) * ($cw + $gap);
@@ -412,33 +434,47 @@ final class MarbleSheets
 
     private function taskSheet(array $v, ?int $num): void
     {
+        $this->orient(true);
         [$items, $y] = $this->header('Oppgaver', $num, $this->taskLead());
-        $items[] = $this->text(self::PAGE_W - self::M - 62, 25, 'Navn:', 3.5, false, self::INK2);
-        $items[] = ['k' => 'line', 'x1' => self::PAGE_W - self::M - 51, 'y1' => 25.6, 'x2' => self::PAGE_W - self::M, 'y2' => 25.6, 's' => self::INK2, 'lw' => 0.25];
+        $items[] = $this->text($this->pw - self::M - 62, 25, 'Navn:', 3.5, false, self::INK2);
+        $items[] = ['k' => 'line', 'x1' => $this->pw - self::M - 51, 'y1' => 25.6, 'x2' => $this->pw - self::M, 'y2' => 25.6, 's' => self::INK2, 'lw' => 0.25];
         $section = 0;
         $label = 'Oppgaver' . ($num ? " $num" : '');
 
-        $ensure = function (float $need) use (&$items, &$y, $num, $label) {
-            if ($y + $need > self::BOTTOM) {
-                $this->addPage('tasks', $label, $num, $items);
-                [$items, $y] = $this->header('Oppgaver (fortsatt)', $num, '');
+        // To spalter på den liggende siden: fyll venstre spalte, så høyre, så ny side.
+        $gap = 12.0;
+        $cw = ($this->pw - 2 * self::M - $gap) / 2;
+        $x0 = self::M;
+        $top = $y;
+        $ensure = function (float $need) use (&$items, &$y, &$x0, &$top, $num, $label, $cw, $gap) {
+            if ($y + $need <= $this->bottom()) {
+                return;
             }
+            if ($x0 === self::M) {
+                $x0 = self::M + $cw + $gap;
+                $y = $top;
+                return;
+            }
+            $this->addPage('tasks', $label, $num, $items);
+            [$items, $y] = $this->header('Oppgaver (fortsatt)', $num, '');
+            $x0 = self::M;
+            $top = $y;
         };
 
         if ($this->p['task_round']) {
             $section++;
             $n = $this->p['balls'];
             $ensure(14 + ($n + 2) * 8.5);
-            $items[] = $this->text(self::M, $y, "$section · Kulerunde", 4.2, true, self::INK);
+            $items[] = $this->text($x0, $y, "$section · Kulerunde", 4.2, true, self::INK);
             $y += 5.5;
-            foreach ($this->wrap($this->roundText(), 3.5, self::PAGE_W - 2 * self::M) as $line) {
-                $items[] = $this->text(self::M, $y, $line, 3.5, false, self::INK);
+            foreach ($this->wrap($this->roundText(), 3.5, $cw) as $line) {
+                $items[] = $this->text($x0, $y, $line, 3.5, false, self::INK);
                 $y += 4.8;
             }
             $y += 2;
-            $tw = (self::PAGE_W - 2 * self::M - 8) / 2;
+            $tw = ($cw - 8) / 2;
             foreach ([0, 1] as $t) {
-                array_push($items, ...$this->roundTable(self::M + $t * ($tw + 8), $y, $tw, 'Runde ' . ($t + 1)));
+                array_push($items, ...$this->roundTable($x0 + $t * ($tw + 8), $y, $tw, 'Runde ' . ($t + 1)));
             }
             $y += 6 + ($n + 2) * 8.5 + 8;
         }
@@ -447,17 +483,17 @@ final class MarbleSheets
             $section++;
             $ensure(30);
             $what = $this->p['content'] === 'letters' ? 'hver bokstav' : 'hvert symbol';
-            $items[] = $this->text(self::M, $y, "$section · Regn med verdiene", 4.2, true, self::INK);
+            $items[] = $this->text($x0, $y, "$section · Regn med verdiene", 4.2, true, self::INK);
             $y += 5.5;
-            $items[] = $this->text(self::M, $y, "Skriv verdien under $what, og regn ut svaret.", 3.5, false, self::INK);
+            $items[] = $this->text($x0, $y, "Skriv verdien under $what, og regn ut svaret.", 3.5, false, self::INK);
             $y += 7;
             $w = $this->calcWidth($this->p['calc_terms']);
-            $cols = 2 * $w + 10 <= self::PAGE_W - 2 * self::M ? 2 : 1;
+            $cols = 2 * $w + 10 <= $cw ? 2 : 1;
             foreach (array_chunk($v['calc'], $cols) as $ri => $row) {
                 $ensure(19);
                 foreach ($row as $ci => $c) {
                     $i = $ri * $cols + $ci;
-                    $x = self::M + $ci * ((self::PAGE_W - 2 * self::M) / $cols);
+                    $x = $x0 + $ci * (($cw) / $cols);
                     array_push($items, ...$this->calcItem($x, $y, chr(97 + $i) . ')', $c, $v['holes']));
                 }
                 $y += 19;
@@ -468,19 +504,20 @@ final class MarbleSheets
         if ($v['find']) {
             $section++;
             $ensure(26);
-            $items[] = $this->text(self::M, $y, "$section · Finn hullene", 4.2, true, self::INK);
+            $items[] = $this->text($x0, $y, "$section · Finn hullene", 4.2, true, self::INK);
             $y += 5.5;
-            foreach ($this->wrap($this->findText(), 3.5, self::PAGE_W - 2 * self::M) as $line) {
-                $items[] = $this->text(self::M, $y, $line, 3.5, false, self::INK);
+            foreach ($this->wrap($this->findText(), 3.5, $cw) as $line) {
+                $items[] = $this->text($x0, $y, $line, 3.5, false, self::INK);
                 $y += 4.8;
             }
             $y += 4;
-            $cols = 2;
+            $fw = 7 + 20 * $this->p['find_size'] + 12;     // a)  [ ] + [ ] = 17
+            $cols = 2 * $fw + 6 <= $cw ? 2 : 1;
             foreach (array_chunk($v['find'], $cols) as $ri => $row) {
                 $ensure(14);
                 foreach ($row as $ci => $f) {
                     $i = $ri * $cols + $ci;
-                    $x = self::M + $ci * ((self::PAGE_W - 2 * self::M) / $cols);
+                    $x = $x0 + $ci * (($cw) / $cols);
                     array_push($items, ...$this->findItem($x, $y, chr(97 + $i) . ')', $f['target']));
                 }
                 $y += 14;
@@ -609,41 +646,56 @@ final class MarbleSheets
 
     private function answerKey(array $variants): void
     {
+        $this->orient(true);
         [$items, $y] = $this->header('Fasit', null, 'For læreren. Verdiene i hullene, svarene på stykkene og alle løsningene på «Finn hullene».');
-        $flush = function (float $need) use (&$items, &$y) {
-            if ($y + $need > self::BOTTOM) {
-                $this->addPage('key', 'Fasit', null, $items);
-                [$items, $y] = $this->header('Fasit (fortsatt)', null, '');
+        // To spalter på den liggende siden, som oppgavearket.
+        $gap = 12.0;
+        $cw = ($this->pw - 2 * self::M - $gap) / 2;
+        $x0 = self::M;
+        $top = $y;
+        $flush = function (float $need) use (&$items, &$y, &$x0, &$top, $cw, $gap) {
+            if ($y + $need <= $this->bottom()) {
+                return;
             }
+            if ($x0 === self::M) {
+                $x0 = self::M + $cw + $gap;
+                $y = $top;
+                return;
+            }
+            $this->addPage('key', 'Fasit', null, $items);
+            [$items, $y] = $this->header('Fasit (fortsatt)', null, '');
+            $x0 = self::M;
+            $top = $y;
         };
-        $W = self::PAGE_W - 2 * self::M;
+        $W = $cw;
         foreach ($variants as $v) {
             $flush(30);
             if (count($variants) > 1) {
-                $items[] = $this->text(self::M, $y, 'Variant ' . $v['number'], 4.2, true, self::ACCENT);
+                $items[] = $this->text($x0, $y, 'Variant ' . $v['number'], 4.2, true, self::ACCENT);
                 $y += 6.5;
             }
             // Hullene i tre kolonner, slik de står på arket.
-            $items[] = $this->text(self::M, $y, 'Hullene', 3.5, true, self::INK);
+            $items[] = $this->text($x0, $y, 'Hullene', 3.5, true, self::INK);
             $y += 5.5;
             foreach (array_chunk($v['holes'], 3) as $row) {
                 $flush(6);
                 foreach ($row as $ci => $h) {
-                    array_push($items, ...$this->keyHole(self::M + $ci * ($W / 3), $y, $h));
+                    array_push($items, ...$this->keyHole($x0 + $ci * ($W / 3), $y, $h));
                 }
                 $y += 6;
             }
             $y += 2;
             if ($v['calc']) {
                 $flush(12);
-                $items[] = $this->text(self::M, $y, 'Regn med verdiene', 3.5, true, self::INK);
+                $items[] = $this->text($x0, $y, 'Regn med verdiene', 3.5, true, self::INK);
                 $y += 5.5;
-                foreach (array_chunk($v['calc'], 2) as $ri => $row) {
+                $texts = array_map(fn($c, $i) => chr(97 + $i) . ')  ' . $this->calcAnswerText($c, $v['holes']), $v['calc'], array_keys($v['calc']));
+                $widest = max(array_map(fn($t) => $this->tw($t, 3.3), $texts));
+                $cols = 2 * $widest + 4 <= $W ? 2 : 1;
+                foreach (array_chunk($texts, $cols) as $row) {
                     $flush(6);
-                    foreach ($row as $ci => $c) {
-                        $i = $ri * 2 + $ci;
-                        $s = chr(97 + $i) . ')  ' . $this->calcAnswerText($c, $v['holes']);
-                        $items[] = $this->text(self::M + $ci * ($W / 2), $y, $s, 3.3, false, self::INK);
+                    foreach ($row as $ci => $s) {
+                        $items[] = $this->text($x0 + $ci * ($W / 2), $y, $s, 3.3, false, self::INK);
                     }
                     $y += 5.5;
                 }
@@ -651,14 +703,14 @@ final class MarbleSheets
             }
             if ($v['find']) {
                 $flush(12);
-                $items[] = $this->text(self::M, $y, 'Finn hullene (alle løsninger)', 3.5, true, self::INK);
+                $items[] = $this->text($x0, $y, 'Finn hullene (alle løsninger)', 3.5, true, self::INK);
                 $y += 5.5;
                 foreach ($v['find'] as $i => $f) {
                     $sols = array_map(fn($sol) => implode(' + ', array_map(fn($h) => $this->holeName($v['holes'][$h]), $sol)), $f['solutions']);
                     $lines = $this->wrap(chr(97 + $i) . ')  ' . $f['target'] . ':  ' . implode('   eller   ', $sols), 3.3, $W);
                     foreach ($lines as $li => $line) {
                         $flush(5.5);
-                        $items[] = $this->text(self::M + ($li ? 6 : 0), $y, $line, 3.3, false, self::INK);
+                        $items[] = $this->text($x0 + ($li ? 6 : 0), $y, $line, 3.3, false, self::INK);
                         $y += 5;
                     }
                 }
@@ -710,11 +762,11 @@ final class MarbleSheets
             ['k' => 'rect', 'x' => self::M, 'y' => 28.5, 'w' => 14, 'h' => 1.2, 'f' => self::ORANGE],
         ];
         if ($num) {
-            $items[] = $this->text(self::PAGE_W - self::M, 13, "Variant $num", 2.82, true, self::INK2, 'R');
+            $items[] = $this->text($this->pw - self::M, 13, "Variant $num", 2.82, true, self::INK2, 'R');
         }
         $y = 36.5;
         if ($lead !== '') {
-            foreach ($this->wrap($lead, 3.7, self::PAGE_W - 2 * self::M) as $line) {
+            foreach ($this->wrap($lead, 3.7, $this->pw - 2 * self::M) as $line) {
                 $items[] = $this->text(self::M, $y, $line, 3.7, false, self::INK2);
                 $y += 5;
             }

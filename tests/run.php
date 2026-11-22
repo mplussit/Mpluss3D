@@ -99,6 +99,59 @@ function writeStl(string $path, array $tris): void
 }
 
 /** Pakker ut alle innholdsstrømmer i en PDF fra FPDF. */
+/**
+ * Sidene i en FPDF-PDF med innhold og størrelse i mm.
+ * @return list<array{c:string,w:float,h:float}>
+ */
+function pdfPages(string $pdf): array
+{
+    $k = 72 / 25.4;
+    $objects = [];
+    preg_match_all('/(\d+) 0 obj\s*<<(.*?)>>\s*(?:stream\r?\n)?/s', $pdf, $m, PREG_SET_ORDER | PREG_OFFSET_CAPTURE);
+    foreach ($m as $hit) {
+        $dict = $hit[2][0];
+        $stream = null;
+        if (preg_match('/\/Length (\d+)/', $dict, $len) && str_ends_with(rtrim($hit[0][0], "\r\n"), 'stream')) {
+            $raw = substr($pdf, $hit[0][1] + strlen($hit[0][0]), (int) $len[1]);
+            $u = @gzuncompress($raw);
+            $stream = $u === false ? $raw : $u;
+        }
+        $objects[(int) $hit[1][0]] = ['dict' => $dict, 'stream' => $stream];
+    }
+    $default = [210.0, 297.0];
+    foreach ($objects as $o) {
+        if (str_contains($o['dict'], '/Type /Pages') && preg_match('/\/MediaBox \[0 0 ([\d.]+) ([\d.]+)\]/', $o['dict'], $mb)) {
+            $default = [$mb[1] / $k, $mb[2] / $k];
+        }
+    }
+    $pages = [];
+    foreach ($objects as $o) {
+        if (!preg_match('/\/Type \/Page\b(?!s)/', $o['dict'])) {
+            continue;
+        }
+        [$w, $h] = preg_match('/\/MediaBox \[0 0 ([\d.]+) ([\d.]+)\]/', $o['dict'], $mb) ? [$mb[1] / $k, $mb[2] / $k] : $default;
+        preg_match('/\/Contents (\d+) 0 R/', $o['dict'], $cn);
+        $pages[] = ['c' => (string) ($objects[(int) ($cn[1] ?? 0)]['stream'] ?? ''), 'w' => round($w, 1), 'h' => round($h, 1)];
+    }
+    return $pages;
+}
+
+/** Tekst som ligger utenfor siden (marg: x 10 mm, topp 8 mm, bunn 5 mm). @return list<string> */
+function textOutside(array $page, float $mx = 10, float $mtop = 8, float $mbottom = 5): array
+{
+    $k = 72 / 25.4;
+    $bad = [];
+    preg_match_all('/BT ([\d.\-]+) ([\d.\-]+) Td/', $page['c'], $m, PREG_SET_ORDER);
+    foreach ($m as [, $x, $y]) {
+        $xm = $x / $k;
+        $ym = $page['h'] - $y / $k;
+        if ($xm < $mx || $xm > $page['w'] - $mx || $ym < $mtop || $ym > $page['h'] - $mbottom) {
+            $bad[] = sprintf('(%.1f, %.1f)', $xm, $ym);
+        }
+    }
+    return $bad;
+}
+
 function pdfContent(string $pdf): string
 {
     // Les nøyaktig /Length byte (komprimerte data kan slutte med \r).
@@ -818,20 +871,17 @@ test('hel sirkel av to brøksett', function () {
     eq(12, 3 * $x + 2 * $y);
 });
 
-test('PDF: fire A4-sider for alle kombinasjoner, tekst innenfor arket', function () use ($frac, $combos, $k) {
+test('PDF: fire A4-sider (oppgavesidene liggende) for alle kombinasjoner, tekst innenfor arket', function () use ($frac, $combos, $k) {
     foreach ($combos as $dens) {
         foreach ([50, 150] as $D) {
             $pdf = $frac->renderPdf($frac->validate(['denominators' => $dens, 'diameter' => $D]));
             ok(str_starts_with($pdf, '%PDF-'));
-            eq(4, preg_match_all('/\/Type \/Page\b/', $pdf), json_encode($dens) . ' sider');
-            preg_match('/\/MediaBox \[0 0 ([\d.]+) ([\d.]+)\]/', $pdf, $mb);
-            near(210, $mb[1] / $k, 0.1);
-            near(297, $mb[2] / $k, 0.1);
-            preg_match_all('/BT ([\d.\-]+) ([\d.\-]+) Td/', pdfContent($pdf), $m, PREG_SET_ORDER);
-            foreach ($m as [, $x, $y]) {
-                $xm = $x / $k;
-                $ym = 297 - $y / $k;
-                ok($xm >= 10 && $xm <= 200 && $ym >= 8 && $ym <= 292, json_encode($dens) . " tekst utenfor arket ($xm, $ym)");
+            $pages = pdfPages($pdf);
+            eq(4, count($pages), json_encode($dens) . ' sider');
+            // Oversikt og arbeidsflate (1:1) er stående, oppgavesidene liggende.
+            eq(['P', 'L', 'L', 'P'], array_map(fn($p) => $p['w'] > $p['h'] ? 'L' : 'P', $pages), 'retning');
+            foreach ($pages as $i => $p) {
+                ok(!textOutside($p), json_encode($dens) . ' side ' . ($i + 1) . ': tekst utenfor arket ' . implode(' ', textOutside($p)));
             }
         }
     }
@@ -1202,22 +1252,17 @@ test('oppgavene passer til klossene i settet (alle sett)', function () use ($b10
     }
 });
 
-test('PDF: seks A4-sider (side 6 liggende) for små og store sett, tekst innenfor arket', function () use ($b10, $b10Sets, $k) {
+test('PDF: seks A4-sider (oppgavesidene liggende) for små og store sett, tekst innenfor arket', function () use ($b10, $b10Sets, $k) {
     foreach ($b10Sets as $in) {
         $pdf = $b10->renderPdf($b10->validate($in));
         ok(str_starts_with($pdf, '%PDF-'));
         eq(6, preg_match_all('/\/Type \/Page\b/', $pdf), json_encode($in) . ' sider');
-        preg_match_all('/stream\r?\n(.*?)\r?\nendstream/s', $pdf, $streams);
-        $pages = array_values(array_filter(array_map(fn($s) => @gzuncompress($s) ?: $s, $streams[1]), fn($c) => str_contains($c, 'BT ')));
+        $pages = pdfPages($pdf);
         eq(6, count($pages));
-        foreach ($pages as $i => $c) {
-            [$W, $H] = $i === 5 ? [297, 210] : [210, 297];
-            preg_match_all('/BT ([\d.\-]+) ([\d.\-]+) Td/', $c, $m, PREG_SET_ORDER);
-            foreach ($m as [, $x, $y]) {
-                $xm = $x / $k;
-                $ym = $H - $y / $k;
-                ok($xm >= 10 && $xm <= $W - 10 && $ym >= 8 && $ym <= $H - 5, json_encode($in) . " side " . ($i + 1) . ": tekst utenfor arket ($xm, $ym)");
-            }
+        foreach ($pages as $i => $p) {
+            ok(!textOutside($p), json_encode($in) . ' side ' . ($i + 1) . ': tekst utenfor arket ' . implode(' ', textOutside($p)));
+            // Oversikten er stående, oppgavesidene liggende.
+            eq($i === 0 ? 'P' : 'L', $p['w'] > $p['h'] ? 'L' : 'P', 'side ' . ($i + 1) . ' retning');
         }
         // Side 6 er liggende
         ok((bool) preg_match('/\/MediaBox \[0 0 841\.89 595\.28\]/', $pdf) || str_contains($pdf, '/Rotate'), 'side 6 skal være liggende');
@@ -1710,22 +1755,17 @@ test('brøk: bare brøker som kan vises nøyaktig, og helen kan byttes', functio
     ok($paper && $paper[0]['paper'], 'uten brøker: tegneoppgaver');
 });
 
-test('PDF: sju A4-sider (side 7 liggende), tekst innenfor arket, for alle sett', function () use ($rods, $rodSets, $k) {
+test('PDF: sju A4-sider (oppgavesidene liggende), tekst innenfor arket, for alle sett', function () use ($rods, $rodSets, $k) {
     foreach ([...$rodSets, ['unit' => 20, 'grid' => 1, 'labels' => 1, 'color_mode' => 'single'], ['unit' => 6, 'color_mode' => 'custom', 'color_1' => '#000000']] as $in) {
         $pdf = $rods->renderPdf($rods->validate($in));
         ok(str_starts_with($pdf, '%PDF-'));
         eq(7, preg_match_all('/\/Type \/Page\b/', $pdf), json_encode($in) . ' sider');
-        preg_match_all('/stream\r?\n(.*?)\r?\nendstream/s', $pdf, $streams);
-        $pages = array_values(array_filter(array_map(fn($s) => @gzuncompress($s) ?: $s, $streams[1]), fn($c) => str_contains($c, 'BT ')));
+        $pages = pdfPages($pdf);
         eq(7, count($pages));
-        foreach ($pages as $i => $c) {
-            [$W, $H] = $i === 6 ? [297, 210] : [210, 297];
-            preg_match_all('/BT ([\d.\-]+) ([\d.\-]+) Td/', $c, $m, PREG_SET_ORDER);
-            foreach ($m as [, $x, $y]) {
-                $xm = $x / $k;
-                $ym = $H - $y / $k;
-                ok($xm >= 10 && $xm <= $W - 10 && $ym >= 8 && $ym <= $H - 5, json_encode($in) . ' side ' . ($i + 1) . ": tekst utenfor arket ($xm, $ym)");
-            }
+        foreach ($pages as $i => $p) {
+            ok(!textOutside($p), json_encode($in) . ' side ' . ($i + 1) . ': tekst utenfor arket ' . implode(' ', textOutside($p)));
+            // Oversikten er stående, oppgavesidene liggende.
+            eq($i === 0 ? 'P' : 'L', $p['w'] > $p['h'] ? 'L' : 'P', 'side ' . ($i + 1) . ' retning');
         }
     }
 });

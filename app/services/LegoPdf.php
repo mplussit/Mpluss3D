@@ -78,7 +78,7 @@ final class LegoPdf extends WorksheetPdf
         $lead = $first
             ? 'Rammene i prosjektet, med mål og etiketter. Etikettene på de neste sidene er i faktisk størrelse: skriv ut i 100 %.'
             : 'Flere rammer i prosjektet.';
-        $y = $this->header($no, $first ? 'Regn med Lego' : 'Rammene (forts.)', $lead);
+        $y = $this->header($no, $first ? 'Regn med Lego' : 'Rammene (forts.)', $lead, 'P', $first ? 'Oversikt' : 'Rammene (forts.)');
         $pdf = $this->pdf;
         if ($first) {
             $y = $this->equation($y);
@@ -273,7 +273,7 @@ final class LegoPdf extends WorksheetPdf
 
     private function labelPage(int $no, array $placed): void
     {
-        $this->header($no, 'Etiketter', 'Klipp langs linjene og lim eller tap etiketten på det flate etikettfeltet på rammen.');
+        $this->header($no, 'Etiketter', 'Klipp langs linjene og lim eller tap etiketten på det flate etikettfeltet på rammen.', 'P');
         $pdf = $this->pdf;
         $pdf->SetFillColor(255, 243, 205);
         $pdf->SetDrawColor(230, 180, 60);

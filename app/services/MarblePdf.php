@@ -18,7 +18,8 @@ final class MarblePdf
         $pdf->SetTitle(LabelPdf::enc($title));
         $pdf->SetCreator('M+ 3D');
         foreach ($pages as $page) {
-            $pdf->AddPage('P');
+            $pdf->AddPage($page['o'] ?? 'P');
+            $pdf->SetPageTitle((string) ($page['label'] ?? ''));
             foreach ($page['items'] as $it) {
                 $this->draw($pdf, $it);
             }

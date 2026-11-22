@@ -210,6 +210,9 @@ final class Api
         $pdf = $model->renderPdf($params);
         $name = $model->pdfFilename($params);
         header('Content-Type: application/pdf');
+        // Sidenavnene til fanene i forhåndsvisningen (JSON, URL-kodet).
+        header('X-Page-Titles: ' . rawurlencode(json_encode(LabelPdf::lastPageTitles(), JSON_UNESCAPED_UNICODE)));
+        header('Cache-Control: no-store');
         header('Content-Length: ' . strlen($pdf));
         header('Content-Disposition: ' . (isset($_GET['download']) ? 'attachment' : 'inline') . '; filename="' . $name . '"');
         echo $pdf;
