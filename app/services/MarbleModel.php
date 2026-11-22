@@ -44,6 +44,7 @@ final class MarbleModel implements ParametricModel
             'letters'        => $d['letters'],
             'symbols'        => $d['symbols'],
             'files'          => $d['files'],
+            'layouts'        => array_map(fn($l) => ['holes' => count($l['holes']), 'pins' => $l['pins'], 'file' => $l['file']], $d['layouts']),
             'defaults'       => $this->defaults(),
         ];
     }
@@ -78,6 +79,14 @@ final class MarbleModel implements ParametricModel
         }
         foreach ($d['parameters'] as $key => $spec) {
             $p[$key] = (int) $p[$key];
+        }
+
+        if (array_key_exists('layout', $input)) {
+            if (is_string($input['layout']) && isset($d['layouts'][$input['layout']])) {
+                $p['layout'] = $input['layout'];
+            } else {
+                $err('layout', 'Ukjent kulespill. Velg A, B eller C.');
+            }
         }
 
         if (isset($input['content'])) {
@@ -124,7 +133,7 @@ final class MarbleModel implements ParametricModel
         }
 
         // Regler som avhenger av flere valg.
-        $n = count($d['holes']);
+        $n = count($d['layouts'][$p['layout']]['holes']);
         if ($p['content'] === 'numbers') {
             $this->rangeRule($p, 'num_min', 'num_max', $n, $err);
         }
@@ -153,9 +162,17 @@ final class MarbleModel implements ParametricModel
         }
     }
 
+    /** Definisjonen med hullene til det valgte spillbrettet (A, B eller C). */
+    private function boardDefinition(array $params): array
+    {
+        $d = $this->definition;
+        $d['holes'] = $d['layouts'][$params['layout']]['holes'];
+        return $d;
+    }
+
     public function sheets(array $params): MarbleSheets
     {
-        return new MarbleSheets($this->definition, $params);
+        return new MarbleSheets($this->boardDefinition($params), $params);
     }
 
     /** Ingen OpenSCAD-deler: spillet og bunnen er faste STL-filer. */
@@ -171,7 +188,7 @@ final class MarbleModel implements ParametricModel
 
     public function describe(array $params): array
     {
-        $d = $this->definition;
+        $d = $this->boardDefinition($params);
         $built = $this->sheets($params)->build();
         $round = fn($v) => is_float($v) ? round($v, 3) : $v;
         $pages = array_map(fn($pg) => $pg + ['items' => array_map(function ($it) use ($round) {
@@ -191,6 +208,7 @@ final class MarbleModel implements ParametricModel
             'board'    => $d['board'],
             'holes'    => $d['holes'],
             'hole_diameter' => $d['hole_diameter'],
+            'layout'   => $params['layout'],
             'content'  => $params['content'],
             'seed'     => $params['seed'],
             'variants' => array_map(fn($v) => [
@@ -206,13 +224,13 @@ final class MarbleModel implements ParametricModel
 
     public function renderPdf(array $params): string
     {
-        return (new MarblePdf())->render($this->sheets($params)->build()['pages'], 'Kulespill – ark');
+        return (new MarblePdf())->render($this->sheets($params)->build()['pages'], "Kulespill {$params['layout']} – ark");
     }
 
     public function pdfFilename(array $params): string
     {
         $c = ['numbers' => 'tall', 'expressions' => 'regnestykker', 'letters' => 'bokstaver', 'symbols' => 'symboler'][$params['content']];
-        return "kulespill-ark-$c.pdf";
+        return 'kulespill-' . strtolower($params['layout']) . "-ark-$c.pdf";
     }
 
     public function archiveName(array $params): string
@@ -228,7 +246,7 @@ final class MarbleModel implements ParametricModel
     public function queryKeys(): array
     {
         return array_merge(array_keys($this->definition['parameters']), [
-            'content', 'unique', 'ops', 'expr_max', 'task_round', 'task_calc', 'calc_ops',
+            'layout', 'content', 'unique', 'ops', 'expr_max', 'task_round', 'task_calc', 'calc_ops',
             'no_negative', 'task_find', 'answer_key', 'seed',
         ]);
     }

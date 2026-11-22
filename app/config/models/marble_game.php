@@ -2,11 +2,12 @@
 /**
  * Kulespill: arkene som legges mellom bunnen og kulespillet.
  *
- * Kulespillet og bunnen er tegnet i SolidCraft (kulespill.sc og
- * kulespill_bunn.sc) og ligger ferdig som STL i public/assets/kulespill/.
- * Under hver av de ni lommene er det et gjennomgående hull på Ø20 mm, så
- * arket under syns gjennom hullene. Koordinatene under er hentet fra
- * modellen (mm, X mot høyre, Y mot toppen av spillet, origo i sentrum av
+ * Kulespillet og bunnen er tegnet i SolidCraft (kulespill.sc, kulespill_B.sc,
+ * kulespill_C.sc og kulespill_bunn.sc) og ligger ferdig som STL i
+ * public/assets/kulespill/. Det finnes tre spillbrett, A, B og C, med ulike
+ * lommer og pinner. Under hver lomme er det et gjennomgående hull på Ø20 mm,
+ * så arket under syns gjennom hullene. Koordinatene under er hentet fra
+ * modellene (mm, X mot høyre, Y mot toppen av spillet, origo i sentrum av
  * den runde toppen).
  *
  * Arket er 160 × 250 mm, nøyaktig spillets ytre mål, og ligger i en lomme
@@ -28,19 +29,49 @@ return [
         'height' => 18.0,
     ],
     'hole_diameter' => 20.0,
-    // Rekkefølgen er lesefølgen på arket: rad for rad ovenfra, venstre mot høyre.
-    'holes' => [
-        [-9.5, 12.5],
-        [-59.5, -37.5], [40.5, -37.5],
-        [-59.5, -87.5], [-9.5, -87.5], [40.5, -87.5],
-        [-59.5, -137.5], [-9.5, -137.5], [40.5, -137.5],
+
+    // Tre spillbrett med ulik plassering og ulikt antall hull og pinner.
+    // Alle er laget fra samme SolidCraft-modell (kulespill.sc, kulespill_B.sc,
+    // kulespill_C.sc): lommene står i et rutenett med kolonner på x = −59,5,
+    // −9,5 og 40,5 og rader på y = 12,5, −37,5, −87,5 og −137,5. Hullene står
+    // i lesefølge på arket: rad for rad ovenfra, venstre mot høyre.
+    // Brettene bruker samme bunn og samme ark (160 × 250 mm).
+    'layouts' => [
+        'A' => [
+            'pins'  => 8,
+            'holes' => [
+                [-9.5, 12.5],
+                [-59.5, -37.5], [40.5, -37.5],
+                [-59.5, -87.5], [-9.5, -87.5], [40.5, -87.5],
+                [-59.5, -137.5], [-9.5, -137.5], [40.5, -137.5],
+            ],
+            'file'  => ['path' => 'assets/kulespill/kulespill.stl', 'filename' => 'kulespill-a.stl'],
+        ],
+        'B' => [
+            'pins'  => 12,
+            'holes' => [
+                [-9.5, 12.5],
+                [-59.5, -37.5], [40.5, -37.5],
+                [-9.5, -87.5],
+                [-59.5, -137.5], [40.5, -137.5],
+            ],
+            'file'  => ['path' => 'assets/kulespill/kulespill-b.stl', 'filename' => 'kulespill-b.stl'],
+        ],
+        'C' => [
+            'pins'  => 6,
+            'holes' => [
+                [-59.5, -37.5], [-9.5, -37.5], [40.5, -37.5],
+                [-59.5, -87.5], [40.5, -87.5],
+                [-59.5, -137.5], [-9.5, -137.5], [40.5, -137.5],
+            ],
+            'file'  => ['path' => 'assets/kulespill/kulespill-c.stl', 'filename' => 'kulespill-c.stl'],
+        ],
     ],
     // Innholdet holdes innenfor denne diameteren, så det syns gjennom kula.
     'content_diameter' => 17.0,
 
     'files' => [
-        'board' => ['path' => 'assets/kulespill/kulespill.stl', 'filename' => 'kulespill.stl',
-            'label' => 'Kulespill', 'size' => '160 × 250 × 18 mm'],
+        'board' => ['label' => 'Kulespill', 'size' => '160 × 250 × 18 mm'],
         'base'  => ['path' => 'assets/kulespill/kulespill-bunn.stl', 'filename' => 'kulespill-bunn.stl',
             'label' => 'Bunn med arklomme', 'size' => '166 × 256 × 5 mm'],
     ],
@@ -80,10 +111,11 @@ return [
         'calc_terms'  => ['label' => 'Ledd per stykke', 'min' => 2, 'max' => 5, 'default' => 3],
         'find_count'  => ['label' => 'Antall oppgaver', 'min' => 1, 'max' => 8, 'default' => 4],
         'find_size'   => ['label' => 'Hull per svar', 'min' => 2, 'max' => 3, 'default' => 2],
-        'variants'    => ['label' => 'Antall varianter', 'min' => 1, 'max' => 10, 'default' => 1],
+        'variants'    => ['label' => 'Antall sett', 'min' => 1, 'max' => 10, 'default' => 1],
     ],
 
     'defaults' => [
+        'layout'         => 'A',
         'content'        => 'numbers',
         'unique'         => true,
         'ops'            => ['+', '-'],

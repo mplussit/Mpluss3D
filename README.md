@@ -809,30 +809,34 @@ Passformen mot ekte klosser er **uprøvd** til en ramme er skrevet ut og testet.
 
 ## Kulespill
 
-Et kulespill med ni lommer, tegnet i SolidCraft (`kulespill.sc`), og en bunn med lomme til et ark (`kulespill_bunn.sc`). Under hver lomme er det et gjennomgående hull på Ø20 mm. Arket mellom bunnen og spillet syns derfor gjennom hullene, og læreren bestemmer hva som står der. En klinkekule i glass blir liggende i lommen, og innholdet kan leses gjennom den.
+Tre kulespill, A, B og C, tegnet i SolidCraft (`kulespill.sc`, `kulespill_B.sc` og `kulespill_C.sc`), og en felles bunn med lomme til et ark (`kulespill_bunn.sc`). Under hver lomme er det et gjennomgående hull på Ø20 mm. Arket mellom bunnen og spillet syns derfor gjennom hullene, og læreren bestemmer hva som står der. En klinkekule i glass blir liggende i lommen, og innholdet kan leses gjennom den.
 
 ### Spillet og bunnen
 
 | Del | Fil | Mål |
 |---|---|---|
-| Kulespill | `public/assets/kulespill/kulespill.stl` | 160 × 250 × 18 mm, rund topp (R80), utskytingsbane til høyre |
+| Kulespill A | `public/assets/kulespill/kulespill.stl` | 160 × 250 × 18 mm, rund topp (R80), utskytingsbane til høyre. 9 hull, 8 pinner |
+| Kulespill B | `public/assets/kulespill/kulespill-b.stl` | Samme mål. 6 hull, 12 pinner |
+| Kulespill C | `public/assets/kulespill/kulespill-c.stl` | Samme mål. 8 hull, 6 pinner |
 | Bunn | `public/assets/kulespill/kulespill-bunn.stl` | 166 × 256 × 5 mm: 2 mm gulv, 3 mm kant, lomme 161 × 251 mm og to grephakk |
 
 * Filene er eksportert fra SolidCraft og er ikke parametriske i appen. Endres modellen, eksporteres STL-ene på nytt, og hullkoordinatene i `app/config/models/marble_game.php` oppdateres fra modellen.
 * Kanten på bunnen (5 mm over bordet) slutter under stempelhullet foran i spillet, som starter ca. 6,6 mm over bordet.
-* Hullsentrene (mm, origo i sentrum av den runde toppen): (−9,5; 12,5), (−59,5; −37,5), (40,5; −37,5), (−59,5 / −9,5 / 40,5; −87,5) og (−59,5 / −9,5 / 40,5; −137,5).
+* Lommene står i et rutenett på 3 × 4 plasser (mm, origo i sentrum av den runde toppen): x = −59,5, −9,5 og 40,5, y = 12,5, −37,5, −87,5 og −137,5. Hvert brett bruker noen av plassene (`layouts` i `app/config/models/marble_game.php`). Plassen øverst til venstre brukes ikke, for der får ikke fasen mot gulvet plass inntil den runde kanten.
+* B og C er laget fra `kulespill.sc` ved å velge andre profiler i Extrude1 (gulvet, tette hull) og Extrude2 (lommer og pinner) og andre kanter i Chamfer3, og ved å legge til pinner (Ø3,5 × 18 mm med 2,5 mm fas) der skissen ikke har noen. Pinnene står minst 18 mm fra vegger, lommer og andre pinner, så en kule på 16 mm ikke kan bli sittende fast.
 
 ### Arkene
 
 Læreren velger:
 
-* **I hullene:** tall (fra–til, eventuelt ulike), regnestykker (regnearter + − × :, svar opptil 10, 20, 50 eller 100, bare hele og positive svar, gangetabellen opptil 10), bokstaver A–I eller ni symboler i farger. Bokstaver og symboler får verdier (fra–til) på et eget **verdiark**.
+* **I hullene:** tall (fra–til, eventuelt ulike), regnestykker (regnearter + − × :, svar opptil 10, 20, 50 eller 100, bare hele og positive svar, gangetabellen opptil 10), bokstaver (A–I, så mange som det er hull) eller symboler i farger. Bokstaver og symboler får verdier (fra–til) på et eget **verdiark**.
 * **Oppgaver:**
   * *Kulerunde:* to tabeller (Runde 1 og 2) med 2–8 kuler, der eleven skriver det som står i hullet, verdien og summen.
   * *Regn med verdiene* (bokstaver og symboler): stykker som A + B – C med 2–5 ledd, en rute under hvert ledd til verdien og en svarrute. Kan begrenses til at summen aldri er under null underveis.
   * *Finn hullene:* «[ ] + [ ] = 13» med to eller tre hull. Summene er ulike, og fasiten har alle løsningene.
   * *Fasit* for læreren.
-* **Varianter:** 1–10 sett med ulike verdier. Med tall og regnestykker får hver variant sitt eget hullark. Med bokstaver og symboler er hullarket det samme for alle, og variantene har hvert sitt verdiark og oppgaveark.
+* **Kulespill:** A, B eller C (radioknapper). Hullarket, verdiarket, oppgavene og fasiten lages for hullene på det valgte brettet, og alle sidene merkes med bokstaven (oransje rute ved tittelen, «Kulespill A» i toppteksten og bunnteksten, og en stor bokstav nederst til høyre på hullarket, under utskytingsbanen). 3D-visningen og STL-nedlastingen følger valget.
+* **Sett:** 1–10 sett med ulike verdier. Med tall og regnestykker får hvert sett sitt eget hullark. Med bokstaver og symboler er hullarket det samme for alle, og settene har hvert sitt verdiark og oppgaveark.
 * **Lag stykker** gir et nytt tilfeldig frø (`seed`). Alt innhold lages deterministisk av frøet (`MarbleRandom`, xorshift32), så samme valg gir alltid de samme arkene.
 
 **Hullarket** er A4 i 1:1. Arket på 160 × 250 mm ligger midt på siden med hjørnemerker, omrisset av den runde toppen og en kontrollinje på 100 mm. Innholdet står midt over hvert hull, innenfor Ø17 mm. Alle hullene på et ark har samme tekststørrelse: den største som får plass i alle.
@@ -1158,7 +1162,8 @@ Regn med Lego:
 Kulespill:
 
 - [ ] Skriv ut kulespillet og bunnen. Arket (160 × 250 mm) skal ligge flatt i lomma, og spillet skal stå stødig oppå.
-- [ ] Skriv ut hullarket i 100 %, mål kontrollinja (100 mm) og klipp langs hjørnemerkene. Innholdet skal stå midt i alle ni hullene.
+- [ ] Skriv ut hullarket i 100 %, mål kontrollinja (100 mm) og klipp langs hjørnemerkene. Innholdet skal stå midt i alle hullene, på A, B og C.
+- [ ] Skriv ut B og C og kontroller at kula ikke blir sittende fast mellom pinner, lommer og vegger.
 - [ ] Kontroller at innholdet kan leses gjennom en klinkekule i glass, også lange regnestykker.
 - [ ] Kontroller at stempelet ikke tar borti kanten på bunnen.
 

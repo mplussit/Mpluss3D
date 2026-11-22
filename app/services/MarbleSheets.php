@@ -4,8 +4,8 @@ declare(strict_types=1);
 /**
  * Kulespill: innhold og sideoppsett for arkene.
  *
- * Lager innholdet (tall, regnestykker, bokstaver eller symboler i de ni
- * hullene, verdier, oppgaver og fasit) og legger det ut som A4-sider av
+ * Lager innholdet (tall, regnestykker, bokstaver eller symboler i hullene
+ * på spillbrett A, B eller C, verdier, oppgaver og fasit) og legger det ut som A4-sider av
  * enkle tegneelementer i millimeter fra øvre venstre hjørne:
  *
  *   ['k' => 'rect',   'x', 'y', 'w', 'h', 'f' => fyll, 's' => strek, 'lw', 'd' => [på, av]]
@@ -55,7 +55,7 @@ final class MarbleSheets
     /* ================================================================ Innhold */
 
     /**
-     * Innholdet for alle variantene.
+     * Innholdet for alle settene (ulike verdier på samme spillbrett).
      * @return list<array{holes:list<array>, calc:list<array>, find:list<array>}>
      */
     public function variants(): array
@@ -304,7 +304,7 @@ final class MarbleSheets
     private function footerText(): string
     {
         $c = $this->def['contents'][$this->p['content']];
-        return "M+ 3D · Kulespill · $c · frø {$this->p['seed']}";
+        return "M+ 3D · Kulespill {$this->p['layout']} · $c · frø {$this->p['seed']}";
     }
 
     /* -------------------------------------------------------------- Hullark */
@@ -318,8 +318,10 @@ final class MarbleSheets
         $y0 = self::SHEET_Y;
         $W = $this->def['board']['width'];
         $L = $this->def['board']['length'];
-        $title = 'Kulespill · Hullark' . ($num ? " · Variant $num" : ($this->p['variants'] > 1 ? ' · alle varianter' : ''));
-        $items[] = $this->text($x0, 13.5, $title, 3.9, true, self::INK);
+        $board = $this->p['layout'];
+        $title = "Kulespill $board · Hullark" . ($num ? " · Sett $num" : ($this->p['variants'] > 1 ? ' · alle sett' : ''));
+        array_push($items, ...$this->badge($x0, 5.0, 9.0));
+        $items[] = $this->text($x0 + 12, 13.5, $title, 3.9, true, self::INK);
         $items[] = $this->text($x0 + $W, 13.5, 'Skriv ut i 100 % (faktisk størrelse)', 2.6, false, self::INK2, 'R');
         $items[] = $this->text($x0 + $W, 18.0, 'Klipp langs hjørnemerkene: 160 × 250 mm', 2.6, false, self::INK2, 'R');
 
@@ -354,7 +356,11 @@ final class MarbleSheets
             array_push($items, ...$this->holeContent($v['holes'][$i], $cx, $cy, $size));
         }
 
-        $note = $num ? "Variant $num" : ($this->sharedHoleSheet() && $this->p['variants'] > 1 ? 'Samme hullark for alle variantene' : '');
+        // Bokstaven til brettet nederst til høyre på arket, under utskytingsbanen,
+        // så arket kan kjennes igjen når det er klippet ut.
+        $items[] = $this->text($x0 + $W - 10, $y0 + $L - 5, $board, 9.0, true, self::RULE, 'C');
+
+        $note = $num ? "Sett $num" : ($this->sharedHoleSheet() && $this->p['variants'] > 1 ? 'Samme hullark for alle settene' : '');
         if ($note !== '') {
             $items[] = $this->text($x0 + 4, $y0 + $L - 4, $note, 2.4, false, '#a8a196');
         }
@@ -425,7 +431,7 @@ final class MarbleSheets
             $vs = min(12.0, 12.0 * ($cw - 32) / $this->tw('= ' . $h['value'], 12.0, true));
             $items[] = $this->text($x + 29, $cy + 0.359 * $vs, '= ' . $h['value'], $vs, true, self::INK);
         }
-        $y += 3 * ($ch + 6) + 4;
+        $y += intdiv(count($v['holes']) + 2, 3) * ($ch + 6) + 4;
         $items[] = $this->text(self::M, $y, 'Tips: Heng opp verdiarket eller legg det ved siden av spillet. Klipp gjerne ut kortene.', 3.3, false, self::INK2);
         $this->addPage('values', 'Verdiark' . ($num ? " $num" : ''), $num, $items);
     }
@@ -671,7 +677,7 @@ final class MarbleSheets
         foreach ($variants as $v) {
             $flush(30);
             if (count($variants) > 1) {
-                $items[] = $this->text($x0, $y, 'Variant ' . $v['number'], 4.2, true, self::ACCENT);
+                $items[] = $this->text($x0, $y, 'Sett ' . $v['number'], 4.2, true, self::ACCENT);
                 $y += 6.5;
             }
             // Hullene i tre kolonner, slik de står på arket.
@@ -756,13 +762,15 @@ final class MarbleSheets
     /** Topptekst, tittel og ingress som de andre PDF-ene. @return array{0:list<array>,1:float} */
     private function header(string $title, ?int $num, string $lead): array
     {
+        $tx = self::M + 14;
         $items = [
-            $this->text(self::M, 13, 'M+ 3D  ·  KULESPILL', 2.82, true, self::ACCENT),
-            $this->text(self::M, 25, $title, 7.76, true, self::INK),
-            ['k' => 'rect', 'x' => self::M, 'y' => 28.5, 'w' => 14, 'h' => 1.2, 'f' => self::ORANGE],
+            ...$this->badge(self::M, 17.5, 10.5),
+            $this->text($tx, 13, 'M+ 3D  ·  KULESPILL ' . $this->p['layout'], 2.82, true, self::ACCENT),
+            $this->text($tx, 25, $title, 7.76, true, self::INK),
+            ['k' => 'rect', 'x' => $tx, 'y' => 28.5, 'w' => 14, 'h' => 1.2, 'f' => self::ORANGE],
         ];
         if ($num) {
-            $items[] = $this->text($this->pw - self::M, 13, "Variant $num", 2.82, true, self::INK2, 'R');
+            $items[] = $this->text($this->pw - self::M, 13, "Sett $num", 2.82, true, self::INK2, 'R');
         }
         $y = 36.5;
         if ($lead !== '') {
@@ -773,6 +781,16 @@ final class MarbleSheets
             $y += 5;
         }
         return [$items, $y];
+    }
+
+    /** Merket med bokstaven til spillbrettet (A, B eller C): oransje rute med hvit bokstav. */
+    private function badge(float $x, float $y, float $size): array
+    {
+        $fs = $size * 0.72;
+        return [
+            ['k' => 'rect', 'x' => $x, 'y' => $y, 'w' => $size, 'h' => $size, 'f' => self::ORANGE],
+            $this->text($x + $size / 2, $y + $size / 2 + 0.359 * $fs, $this->p['layout'], $fs, true, '#ffffff', 'C'),
+        ];
     }
 
     private function text(float $x, float $y, string $t, float $size, bool $bold, string $color, string $align = 'L'): array

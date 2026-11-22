@@ -1,7 +1,8 @@
 /**
  * 3D-visning av kulespillet: bunnen, hullarket og spillet oppå.
  *
- * Spillet og bunnen er de faste STL-filene (tegnet i SolidCraft). Arket er
+ * Spillet og bunnen er de faste STL-filene (tegnet i SolidCraft). Spillbrettet
+ * (A, B eller C) kan byttes med setBoard(). Arket er
  * hullarket fra serveren, tegnet som SVG og lagt som tekstur på en plate på
  * 160 × 250 mm i bunnens lomme, så innholdet syns gjennom hullene slik det
  * vil gjøre på det ferdige spillet.
@@ -32,6 +33,8 @@ export class MarbleViewer extends ModelViewer {
         this.lift = 0;
         this.liftTarget = 0;
         this.sheetKey = '';
+        this.boardUrl = '';
+        this.geometries = new Map();     // url → Promise<BufferGeometry>
         this.boardMat = new THREE.MeshStandardMaterial({ color: BOARD, roughness: 0.55, metalness: 0, flatShading: true });
         this.baseMat = new THREE.MeshStandardMaterial({ color: BASE, roughness: 0.7, metalness: 0, flatShading: true });
         this.sheetMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9 });
@@ -43,13 +46,24 @@ export class MarbleViewer extends ModelViewer {
         this.setView('iso', false);
     }
 
+    /** Henter en STL-fil (én gang per fil). */
+    geometry(url) {
+        if (!this.geometries.has(url)) {
+            this.geometries.set(url, (async () => {
+                const res = await fetch(url);
+                if (!res.ok) throw new Error('Kunne ikke hente ' + url);
+                return this.loader.parse(await res.arrayBuffer());
+            })());
+        }
+        return this.geometries.get(url);
+    }
+
     /** Laster STL-filene til spillet og bunnen. */
     async load(boardUrl, baseUrl) {
-        const [b, s] = await Promise.all([boardUrl, baseUrl].map(async (url) => {
-            const res = await fetch(url);
-            if (!res.ok) throw new Error('Kunne ikke hente ' + url);
-            return this.loader.parse(await res.arrayBuffer());
-        }));
+        this.boardUrl = boardUrl;
+        const s = await this.geometry(baseUrl);
+        // Brettet kan ha blitt byttet mens filene ble hentet: bruk det siste.
+        const b = await this.geometry(this.boardUrl);
         this.board = new THREE.Mesh(b, this.boardMat);
         this.board.castShadow = true;
         this.board.receiveShadow = true;
@@ -58,6 +72,14 @@ export class MarbleViewer extends ModelViewer {
         this.base.receiveShadow = true;
         this.scene.add(this.base, this.board);
         this.placeBoard();
+    }
+
+    /** Bytter spillbrett (A, B eller C). Bunnen og arket er de samme. */
+    async setBoard(url) {
+        this.boardUrl = url;
+        if (!this.board) return;            // load() bruker boardUrl når filene er hentet
+        const g = await this.geometry(url);
+        if (url === this.boardUrl) this.board.geometry = g;
     }
 
     /** Hullarket (en side fra describe().pages) som tekstur på arket. */

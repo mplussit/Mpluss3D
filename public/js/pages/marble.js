@@ -1,9 +1,9 @@
 /**
  * M+ 3D – Kulespill med ark.
  *
- * Læreren velger hva som står i hullene (tall, regnestykker, bokstaver eller
- * symboler), hvilke oppgaver elevene får og hvor mange varianter som skal
- * lages. Ved hver endring lager serveren alle sidene (api.php?action=describe,
+ * Læreren velger spillbrett (A, B eller C, med ulike hull og pinner), hva som
+ * står i hullene (tall, regnestykker, bokstaver eller symboler), hvilke
+ * oppgaver elevene får og hvor mange sett med ulike verdier som skal lages. Ved hver endring lager serveren alle sidene (api.php?action=describe,
  * MarbleSheets) og sender dem som tegneelementer. Forhåndsvisningen tegner dem
  * som SVG, og PDF-en tegnes fra de samme elementene, så de blir like.
  * «Lag stykker» gir et nytt frø, altså nye verdier og stykker.
@@ -65,6 +65,8 @@ function newSeed() {
 
 function buildControls() {
     const s = state.schema;
+    $('#layout-options').innerHTML = Object.keys(s.layouts).map((k) =>
+        `<label><input type="radio" name="layout" value="${k}"> ${k}</label>`).join('');
     $('#content-options').innerHTML = Object.entries(s.contents).map(([k, label]) =>
         `<label><input type="radio" name="content" value="${k}"> ${escapeHtml(label)}</label>`).join('');
     $('#ops-options').innerHTML = Object.entries(s.operations).map(([op, name]) =>
@@ -74,13 +76,17 @@ function buildControls() {
     $('#calc-ops').innerHTML = ['+', '-'].map((op) =>
         `<label title="${op === '+' ? 'Pluss' : 'Minus'}"><input type="checkbox" name="calc_ops" value="${op}"> <span class="op-sign">${OP_LABELS[op]}</span></label>`).join('');
     const b = s.files;
-    $('#board-sub').textContent = `${b.board.filename} · ${b.board.size}`;
     $('#base-sub').textContent = `${b.base.filename} · ${b.base.size}, lomme til arket`;
 }
 
 /** Setter kontrollene fra state.values og viser bare det som gjelder. */
 function syncControls() {
     const v = state.values;
+    const layout = state.schema.layouts[v.layout];
+    document.querySelector(`#layout-options input[value="${v.layout}"]`).checked = true;
+    $('#layout-help').textContent = `Kulespill ${v.layout}: ${layout.holes} hull og ${layout.pins} pinner. Arkene merkes med ${v.layout}.`;
+    $('#board-title').textContent = `Last ned STL: kulespill ${v.layout}`;
+    $('#board-sub').textContent = `${layout.file.filename} · ${state.schema.files.board.size}`;
     document.querySelector(`#content-options input[value="${v.content}"]`).checked = true;
     for (const k of NUMBER_KEYS) {
         const el = $(`#f-${k}`);
@@ -112,7 +118,10 @@ function bindEvents() {
     const form = $('#controls');
     form.addEventListener('change', (e) => {
         const t = e.target;
-        if (t.name === 'content') state.values.content = t.value;
+        if (t.name === 'layout') {
+            state.values.layout = t.value;
+            if (viewer) viewer.setBoard(boardFile().path).catch((err) => console.error(err));
+        } else if (t.name === 'content') state.values.content = t.value;
         else if (t.name === 'ops') state.values.ops = checked('#ops-options');
         else if (t.name === 'calc_ops') state.values.calc_ops = checked('#calc-ops');
         else if (t.name === 'expr_max') state.values.expr_max = Number(t.value);
@@ -141,7 +150,7 @@ function bindEvents() {
     $('#download-pdf').addEventListener('click', () =>
         downloadFrom(`${API}?action=pdf&model=${MODEL}&download=1`, pdfName(), $('#download-pdf'), updateButtons, requestBody()));
     $('#download-board').addEventListener('click', () => {
-        const f = state.schema.files.board;
+        const f = boardFile();
         downloadFrom(f.path, f.filename, $('#download-board'), () => ($('#download-board').disabled = false));
     });
     $('#download-base').addEventListener('click', () => {
@@ -151,6 +160,10 @@ function bindEvents() {
 }
 
 
+function boardFile() {
+    return state.schema.layouts[state.values.layout].file;
+}
+
 function checked(sel) {
     return [...document.querySelectorAll(`${sel} input:checked`)].map((el) => el.value);
 }
@@ -158,13 +171,13 @@ function checked(sel) {
 function requestBody() {
     const v = state.values;
     const body = {};
-    for (const k of [...NUMBER_KEYS, ...BOOL_KEYS, 'content', 'ops', 'calc_ops', 'expr_max', 'find_size', 'seed']) body[k] = v[k];
+    for (const k of [...NUMBER_KEYS, ...BOOL_KEYS, 'layout', 'content', 'ops', 'calc_ops', 'expr_max', 'find_size', 'seed']) body[k] = v[k];
     return body;
 }
 
 function pdfName() {
     const c = { numbers: 'tall', expressions: 'regnestykker', letters: 'bokstaver', symbols: 'symboler' }[state.values.content];
-    return `kulespill-ark-${c}.pdf`;
+    return `kulespill-${state.values.layout.toLowerCase()}-ark-${c}.pdf`;
 }
 
 /* ------------------------------------------------------------- Generering */
@@ -237,12 +250,12 @@ function updateInfo() {
     const v = state.values;
     const kinds = { holes: 0, values: 0, tasks: 0, key: 0 };
     d.pages.forEach((p) => kinds[p.kind]++);
-    const parts = [`<span class="num">${d.pages.length} sider</span>`];
+    const parts = [`<span class="num">Kulespill ${d.layout}</span>`, `${d.pages.length} sider`];
     parts.push(`${kinds.holes} hullark`);
     if (kinds.values) parts.push(`${kinds.values} verdiark`);
     if (kinds.tasks) parts.push(`${kinds.tasks} oppgaveark`);
     if (kinds.key) parts.push('fasit');
-    parts.push(`${v.variants} ${v.variants === 1 ? 'variant' : 'varianter'}`);
+    parts.push(`${v.variants} sett`);
     $('#model-info').innerHTML = parts.join(' · ');
     $('#pdf-sub').textContent = `${pdfName()} · ${d.pages.length} sider`;
 }
@@ -267,7 +280,7 @@ async function show3d() {
             viewer.setLifted($('#lift-board').checked);
             setStatus('Laster kulespillet …', true);
             try {
-                await viewer.load(state.schema.files.board.path, state.schema.files.base.path);
+                await viewer.load(boardFile().path, state.schema.files.base.path);
                 setStatus(null);
             } catch (err) {
                 console.error(err);
@@ -279,7 +292,7 @@ async function show3d() {
     if (viewer && state.current) updateSheet3d();
 }
 
-/** Hullarket for siden som er valgt (samme variant), eller det første. */
+/** Hullarket for siden som er valgt (samme sett), eller det første. */
 function updateSheet3d() {
     const pages = state.current.pages;
     const cur = pages[state.page];

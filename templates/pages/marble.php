@@ -24,14 +24,21 @@
         <div class="viewer-info">
             <div>
                 <p id="model-info" class="model-info"></p>
-                <p class="hint" id="view-hint">Dra for å rotere · rull eller knip for å zoome · arket i 3D er hullarket til første variant</p>
+                <p class="hint" id="view-hint">Dra for å rotere · rull eller knip for å zoome · arket i 3D er hullarket til første sett</p>
             </div>
         </div>
     </section>
 
     <aside class="panel" aria-label="Innstillinger for arkene">
         <form id="controls" novalidate>
-            <h2 class="panel-heading" id="content-heading">1 · I hullene</h2>
+            <h2 class="panel-heading" id="layout-heading">1 · Kulespill</h2>
+            <div id="layout-options" class="segmented segmented-compact layout-options" role="radiogroup" aria-labelledby="layout-heading"></div>
+            <p class="field-help" id="layout-help"></p>
+            <p class="field-error" data-error-for="layout"></p>
+
+            <hr class="rule">
+
+            <h2 class="panel-heading" id="content-heading">2 · I hullene</h2>
             <div id="content-options" class="segmented segmented-compact content-options" role="radiogroup" aria-labelledby="content-heading"></div>
             <p class="field-error" data-error-for="content"></p>
 
@@ -72,7 +79,7 @@
 
             <hr class="rule">
 
-            <h2 class="panel-heading">2 · Oppgaver</h2>
+            <h2 class="panel-heading">3 · Oppgaver</h2>
             <div class="task-block">
                 <label class="check"><input type="checkbox" id="f-task_round"> <span><strong>Kulerunde</strong> – skyt kuler og regn ut summen</span></label>
                 <div class="sub-fields" id="sub-round">
@@ -112,14 +119,14 @@
 
             <hr class="rule">
 
-            <h2 class="panel-heading">3 · Varianter</h2>
+            <h2 class="panel-heading">4 · Sett</h2>
             <div class="variant-row">
-                <label class="type-count"><span>Antall ark med ulike verdier</span>
+                <label class="type-count"><span>Antall sett med ulike verdier</span>
                     <input type="number" id="f-variants" min="1" max="10" step="1" inputmode="numeric"></label>
             </div>
             <p class="field-error" data-error-for="variants"></p>
             <button type="button" class="btn btn-secondary make-btn" id="make-new">
-                <span class="btn-title">Lag stykker</span><span class="btn-sub">Nye verdier og stykker i alle variantene</span>
+                <span class="btn-title">Lag stykker</span><span class="btn-sub">Nye verdier og stykker i alle settene</span>
             </button>
         </form>
 
@@ -127,13 +134,13 @@
 
         <hr class="rule">
 
-        <h2 class="panel-heading">4 · Nedlasting</h2>
+        <h2 class="panel-heading">5 · Nedlasting</h2>
         <div class="downloads">
             <button type="button" id="download-pdf" class="btn btn-primary" disabled>
                 <span class="btn-title">Last ned PDF med arkene</span><span class="btn-sub" id="pdf-sub">Alle sidene i forhåndsvisningen</span>
             </button>
             <button type="button" id="download-board" class="btn btn-secondary">
-                <span class="btn-title">Last ned STL: kulespillet</span><span class="btn-sub" id="board-sub">160 × 250 × 18 mm</span>
+                <span class="btn-title" id="board-title">Last ned STL: kulespill A</span><span class="btn-sub" id="board-sub">160 × 250 × 18 mm</span>
             </button>
             <button type="button" id="download-base" class="btn btn-secondary">
                 <span class="btn-title">Last ned STL: bunnen</span><span class="btn-sub" id="base-sub">166 × 256 × 5 mm, lomme til arket</span>

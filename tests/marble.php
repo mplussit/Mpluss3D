@@ -20,15 +20,29 @@ $allItems = function (array $pages): Generator {
     }
 };
 
-test('kulespill: hullene fra SolidCraft-modellen ligger på arket, med plass til innholdet', function () use ($marble, $mdef, $mp) {
-    eq(9, count($mdef['holes']));
+test('kulespill: hullene fra SolidCraft-modellene ligger på arket, med plass til innholdet', function () use ($marble, $mdef, $mp) {
+    eq(['A' => 9, 'B' => 6, 'C' => 8], array_map(fn($l) => count($l['holes']), $mdef['layouts']));
+    eq(['A' => 8, 'B' => 12, 'C' => 6], array_map(fn($l) => $l['pins'], $mdef['layouts']));
     $sh = $marble->sheets($mp());
-    foreach ($mdef['holes'] as [$x, $y]) {
-        [$sx, $sy] = $sh->toSheet($x, $y);
-        $r = $mdef['hole_diameter'] / 2;
-        ok($sx - $r >= MarbleSheets::SHEET_X && $sx + $r <= MarbleSheets::SHEET_X + 160, "hull ($x, $y) utenfor arket i x");
-        ok($sy - $r >= MarbleSheets::SHEET_Y && $sy + $r <= MarbleSheets::SHEET_Y + 250, "hull ($x, $y) utenfor arket i y");
-        ok(hypot($x, $y) + $r <= 80 || $y < 0, "hull ($x, $y) utenfor den runde toppen");
+    // Lommene i SolidCraft-modellene står i et rutenett på 3 × 4 plasser.
+    $cols = [-59.5, -9.5, 40.5];
+    $rows = [12.5, -37.5, -87.5, -137.5];
+    foreach ($mdef['layouts'] as $key => $layout) {
+        $holes = $layout['holes'];
+        eq(count($holes), count(array_unique(array_map('json_encode', $holes))), "$key: to like hull");
+        // Lesefølge: rad for rad ovenfra, venstre mot høyre.
+        $sorted = $holes;
+        usort($sorted, fn($a, $b) => [-$a[1], $a[0]] <=> [-$b[1], $b[0]]);
+        eq($sorted, $holes, "$key: hullene i lesefølge");
+        ok(count($holes) <= count($mdef['letters']) && count($holes) <= count($mdef['symbols']), "$key: for mange hull");
+        foreach ($holes as [$x, $y]) {
+            ok(in_array($x, $cols, true) && in_array($y, $rows, true), "$key: hull ($x, $y) utenfor rutenettet");
+            [$sx, $sy] = $sh->toSheet($x, $y);
+            $r = $mdef['hole_diameter'] / 2;
+            ok($sx - $r >= MarbleSheets::SHEET_X && $sx + $r <= MarbleSheets::SHEET_X + 160, "$key: hull ($x, $y) utenfor arket i x");
+            ok($sy - $r >= MarbleSheets::SHEET_Y && $sy + $r <= MarbleSheets::SHEET_Y + 250, "$key: hull ($x, $y) utenfor arket i y");
+            ok(hypot($x, $y) + $r <= 80 || $y < 0, "$key: hull ($x, $y) utenfor den runde toppen");
+        }
     }
     // Arket ligger midt på A4.
     near(25.0, MarbleSheets::SHEET_X, 1e-9);
@@ -161,6 +175,46 @@ test('kulespill: «Finn hullene» har ulike summer og alle løsningene', functio
     }
 });
 
+test('kulespill: brett A, B og C – riktige hull på arket, og alle sidene merket med bokstaven', function () use ($marble, $mdef, $mp) {
+    eq('A', $mp()['layout']);
+    rejects($marble, ['layout' => 'D'], 'layout');
+    rejects($marble, ['layout' => 'a'], 'layout');
+    foreach ($mdef['layouts'] as $key => $layout) {
+        $n = count($layout['holes']);
+        foreach (['numbers', 'expressions', 'letters', 'symbols'] as $c) {
+            $p = $mp(['layout' => $key, 'content' => $c, 'variants' => 2]);
+            $d = $marble->describe($p);
+            eq($key, $d['layout']);
+            eq($layout['holes'], $d['holes']);
+            foreach ($marble->sheets($p)->variants() as $v) {
+                eq($n, count($v['holes']), "$key/$c: antall hull");
+                foreach ($v['find'] as $f) {
+                    foreach ($f['solutions'] as $sol) {
+                        ok(max($sol) < $n, "$key/$c: løsning med hull som ikke finnes");
+                    }
+                }
+                foreach ($v['calc'] as $calc) {
+                    ok(max($calc['terms']) < $n, "$key/$c: stykke med hull som ikke finnes");
+                }
+            }
+            foreach ($d['pages'] as $page) {
+                $texts = array_column(array_filter($page['items'], fn($it) => $it['k'] === 'text'), 't');
+                ok(in_array($key, $texts, true), "$key/$c: «{$page['label']}» mangler merket $key");
+                ok((bool) array_filter($texts, fn($t) => str_contains($t, "Kulespill $key") || str_contains($t, "KULESPILL $key")),
+                    "$key/$c: «{$page['label']}» mangler «Kulespill {$key}»");
+            }
+            // Hullarket har en sirkel per hull.
+            $holePage = $d['pages'][0];
+            $dashed = array_filter($holePage['items'], fn($it) => $it['k'] === 'circle' && isset($it['d']));
+            eq($n, count($dashed), "$key/$c: hull på arket");
+        }
+        // Store tallområder må passe med antall hull.
+        rejects($marble, ['layout' => $key, 'num_min' => 1, 'num_max' => $n - 1, 'unique' => true], 'num_max');
+        eq($n, $mp(['layout' => $key, 'num_min' => 1, 'num_max' => $n, 'unique' => true])['num_max']);
+    }
+    eq('kulespill-b-ark-tall.pdf', $marble->pdfFilename($mp(['layout' => 'B'])));
+});
+
 test('kulespill: sidene – hullark per variant, eller ett felles med bokstaver og symboler', function () use ($marble, $mp) {
     $kinds = fn(array $in) => array_column($marble->describe($mp($in))['pages'], 'kind');
     eq(['holes', 'tasks', 'key'], $kinds([]));
@@ -180,7 +234,7 @@ test('kulespill: alt ligger innenfor A4 og over bunnteksten, og teksten i hullen
         ['content' => 'letters', 'value_min' => 90, 'value_max' => 99, 'balls' => 8, 'calc_count' => 12, 'calc_terms' => 5, 'find_count' => 8, 'find_size' => 3, 'variants' => 3],
         ['content' => 'symbols', 'calc_terms' => 2, 'calc_count' => 1, 'find_count' => 1],
     ];
-    foreach ($cases as $in) {
+    foreach (array_merge(...array_map(fn($l) => array_map(fn($c) => $c + ['layout' => $l], $cases), array_keys($mdef['layouts']))) as $in) {
         $sh = $marble->sheets($mp($in));
         $built = $sh->build();
         foreach ($allItems($built['pages']) as $pi => $it) {
@@ -200,7 +254,7 @@ test('kulespill: alt ligger innenfor A4 og over bunnteksten, og teksten i hullen
         // Teksten i hullene ligger innenfor content_diameter.
         $holes = $built['pages'][0];
         $Rc = $mdef['content_diameter'] / 2;
-        foreach ($mdef['holes'] as [$x, $y]) {
+        foreach ($mdef['layouts'][$in['layout']]['holes'] as [$x, $y]) {
             [$cx, $cy] = $sh->toSheet($x, $y);
             foreach ($holes['items'] as $it) {
                 if ($it['k'] === 'text' && abs($it['x'] - $cx) < 1e-6 && abs($it['y'] - $cy) < 9) {
@@ -241,11 +295,13 @@ test('kulespill: PDF-en har de samme sidene og tekstene som forhåndsvisningen',
             }
         }
     }
-    eq('kulespill-ark-symboler.pdf', $marble->pdfFilename($mp(['content' => 'symbols'])));
+    eq('kulespill-a-ark-symboler.pdf', $marble->pdfFilename($mp(['content' => 'symbols'])));
 });
 
 test('kulespill: STL-filene og forhåndsbildet finnes, og ingen OpenSCAD-deler', function () use ($marble, $mdef, $mp) {
-    foreach ($mdef['files'] as $f) {
+    $files = [$mdef['files']['base'], ...array_column($mdef['layouts'], 'file')];
+    eq(4, count(array_unique(array_column($files, 'path'))), 'egen STL-fil per brett');
+    foreach ($files as $f) {
         $path = __DIR__ . '/../public/' . $f['path'];
         ok(is_file($path), "{$f['path']} mangler");
         $bin = file_get_contents($path);
