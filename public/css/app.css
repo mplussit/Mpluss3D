@@ -1140,7 +1140,7 @@ p { margin: 0; }
 .app-fixed .sheet-stage { height: auto; }
 
 /* «Oppgave | Fasit» over forhåndsvisningen av sider som har fasit. */
-.sheet-pane > .sheet-variant { align-self: center; margin: 0 0 8px; }
+.sheet-pane > .sheet-variant { align-self: flex-start; margin: 0 0 8px; }
 .sheet-pane > .sheet-variant[hidden] { display: none; }
 .sheet-variant label:has(input[value="fasit"]:checked) { background: #c81e1e; border-color: #c81e1e; }
 .pdf-dialog .pdf-fasit { color: #a31919; }
@@ -1163,7 +1163,14 @@ p { margin: 0; }
 .pdf-dialog h3 { margin: 0 0 8px; font: 700 16px var(--font-display); }
 .pdf-section { padding: 14px 0; border-top: 1px solid var(--line); }
 .pdf-dialog h2 + .pdf-section { border-top: 0; padding-top: 0; }
-.pdf-pages { display: flex; flex-direction: column; gap: 6px; max-height: 220px; overflow-y: auto; }
+.pdf-pages { max-height: 240px; overflow-y: auto; }
+.pdf-pages-grid { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 4px 18px; }
+.pdf-pages-grid.no-fasit { grid-template-columns: 1fr auto; }
+.pdf-pages-grid input[type=checkbox] { justify-self: center; width: 18px; height: 18px; margin: 0; accent-color: var(--ink); }
+.pdf-pages-grid input[data-kind="fasit"] { accent-color: #c81e1e; }
+.pdf-col-head { font-size: 12px; font-weight: 700; color: var(--ink-2); text-align: center; position: sticky; top: 0; background: var(--paper); }
+.pdf-col-head:first-child { text-align: left; }
+.pdf-page-title { font-size: 15px; cursor: pointer; }
 .pdf-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
 .pdf-actions .btn-small { min-height: 40px; padding: 0 16px; font-size: 14px; }
 .pdf-feedback { min-height: 1.2em; margin: 8px 0 0; font-size: 14px; color: var(--ink-2); }

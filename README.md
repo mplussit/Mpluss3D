@@ -213,7 +213,7 @@ Alle oppgavearkene har fasit: de samme sidene, med svarene fylt inn i rødt i ru
 * **Serveren:** `api.php?action=pdf&…&fasit=1` lager fasiten med de samme parameterne. Begge utgavene har svarhodet `X-Answer-Pages` med sidene som har svar (for eksempel `[2,3,4,5]`). Sider uten svar, som lærerveiledningen og arbeidsflaten, er like i begge.
 * **Svarene:** en oppgave har `answer`, eller `answers` når den har flere svarfelt (ett svar per felt, i rekkefølge). `WorksheetPdf::fillAnswers()` legger svarene inn i tokenene (`['box', svar]`, `['line', svar]` og egne felt som `fracbox` og `pv`). En oppgave uten svarfelt får svaret etter oppgaven. En forklaring i parentes («6 (1 krum)») står etter ruten når det er plass. Teksten krympes så den får plass.
 * **Egne sider** tegner svarene med `answerInBox()` og `answerOnLine()`, for eksempel «Hvilket tall?» i base 10 og likeverdige brøker, der sirkelen til høyre fargelegges. Kulespillet har det samme i `MarbleSheets` (verdiene og svaret i «Regn med verdiene», og en løsning i «Finn hullene» med de andre under).
-* **Forhåndsvisningen** henter fasiten etter oppgavene. På sider med fasit står «Oppgave | Fasit» over arket, og valget gjelder for alle sidene til det endres. I PDF-dialogen står fasitsidene som «… – fasit» (ikke valgt fra start).
+* **Forhåndsvisningen** henter fasiten etter oppgavene. På sider med fasit står «Oppgave | Fasit» over arket, og valget gjelder for alle sidene til det endres. I PDF-dialogen har sidene to kolonner, Oppgave (valgt fra start) og Fasit (der siden har fasit). Fasitsidene kommer etter oppgavene i PDF-en.
 * Den gamle fasitsiden i romfigurene (side 6) og i kulespillet (valget «Fasit for læreren») er erstattet av dette.
 
 ### Liggende ark

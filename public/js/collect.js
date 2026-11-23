@@ -12,7 +12,8 @@
  * Oppsamlings-PDF-en tømmes når den er laget, slik som i M+.
  *
  * «Merk ark med» skriver en tekst langs høyre kant på hver side (som i M+).
- * Sider med fasit står også som «… – fasit» i listen (ikke valgt fra start).
+ * Sidene står i en tabell med to kolonner: Oppgave (valgt fra start) og Fasit
+ * (ikke valgt) for sidene som har fasit. Fasitsidene kommer etter oppgavene i PDF-en.
  */
 
 const PDF_LIB = 'pdf-lib';
@@ -86,17 +87,16 @@ export function initCollect(source) {
 
     /* ------------------------------------------------------------ Sidene på denne siden */
 
+    /** Sidene i PDF-ene: hasFasit = siden har fasit, fasitReady = fasiten er hentet. */
     function pages() {
         const list = [];
-        const fasit = [];
         source.documents().forEach((d, di) => {
             for (let p = 0; p < d.numPages; p++) {
-                const title = d.titles[p] || `Side ${p + 1}`;
-                list.push({ doc: di, page: p, title });
-                if (d.fasitBytes && d.answers?.includes(p + 1)) fasit.push({ doc: di, page: p, title: `${title} – fasit`, fasit: true });
+                const hasFasit = !!d.answers?.includes(p + 1);
+                list.push({ doc: di, page: p, title: d.titles[p] || `Side ${p + 1}`, hasFasit, fasitReady: hasFasit && !!d.fasitBytes });
             }
         });
-        return [...list, ...fasit];
+        return list;
     }
 
     function renderPages() {
@@ -107,16 +107,33 @@ export function initCollect(source) {
         if (!list.length) {
             box.innerHTML = `<p class="muted">${esc(error || (source.loading() ? 'Lager arkene …' : 'Denne siden har ingen PDF.'))}</p>`;
         } else {
-            box.innerHTML = list.map((p, i) => `
-                <label class="check${p.fasit ? ' pdf-fasit' : ''}"><input type="checkbox" data-page="${i}"${p.fasit ? '' : ' checked'}> ${esc(p.title)}</label>`).join('');
+            const anyFasit = list.some((p) => p.hasFasit);
+            const fasitCell = (p, i) => {
+                if (!p.hasFasit) return '<span></span>';
+                return `<input type="checkbox" data-page="${i}" data-kind="fasit"${p.fasitReady ? '' : ' disabled title="Lager fasiten …"'}`
+                    + ` aria-label="${esc(p.title)}, fasit">`;
+            };
+            box.innerHTML = `
+                <div class="pdf-pages-grid${anyFasit ? '' : ' no-fasit'}" role="group" aria-label="Sidene">
+                    <span class="pdf-col-head">Side</span><span class="pdf-col-head">Oppgave</span>${anyFasit ? '<span class="pdf-col-head pdf-fasit">Fasit</span>' : ''}
+                    ${list.map((p, i) => `
+                        <label class="pdf-page-title" for="pdf-page-${i}">${esc(p.title)}</label>
+                        <input type="checkbox" id="pdf-page-${i}" data-page="${i}" data-kind="task" checked>
+                        ${anyFasit ? fasitCell(p, i) : ''}`).join('')}
+                </div>`;
         }
         updatePageButtons();
     }
 
+    /** De valgte sidene: oppgavene i rekkefølge, så fasitsidene. */
     function selectedPages() {
         const list = pages();
-        return [...dialog.querySelectorAll('#pdf-pages input[data-page]:checked')]
+        const pick = (kind) => [...dialog.querySelectorAll(`#pdf-pages input[data-kind="${kind}"]:checked`)]
             .map((c) => list[Number(c.dataset.page)]).filter(Boolean);
+        return [
+            ...pick('task'),
+            ...pick('fasit').filter((p) => p.fasitReady).map((p) => ({ ...p, title: `${p.title} – fasit`, fasit: true })),
+        ];
     }
 
     function updatePageButtons() {
