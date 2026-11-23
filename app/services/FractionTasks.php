@@ -15,6 +15,9 @@ declare(strict_types=1);
  *   ['box']                           tom rute for et tall
  *   ['line']                          skrivelinje
  *
+ * 'answer' er fasiten. Har oppgaven flere svarfelt, har den også 'answers'
+ * (ett svar per felt, se WorksheetPdf::fillAnswers()).
+ *
  * Alle valg er deterministiske, så samme sett gir samme PDF.
  */
 final class FractionTasks
@@ -115,7 +118,8 @@ final class FractionTasks
                     . 'Hvor mange av hver brukte du?  '], ['box'], ['text', ' ' . $this->model->name($a, 1) . ' og '], ['box'],
                     ['text', ' ' . $this->model->name($b, 1)]],
                 [$a => $x, $b => $y],
-                "$x og $y"
+                "$x og $y",
+                [(string) $x, (string) $y]
             );
         }
         if ($tasks) {
@@ -311,8 +315,8 @@ final class FractionTasks
         return array_merge($odd, $even);
     }
 
-    private function task(array $tokens, array $needs, string $answer): array
+    private function task(array $tokens, array $needs, string $answer, ?array $answers = null): array
     {
-        return ['tokens' => $tokens, 'needs' => $needs, 'answer' => $answer];
+        return ['tokens' => $tokens, 'needs' => $needs, 'answer' => $answer] + ($answers ? ['answers' => $answers] : []);
     }
 }

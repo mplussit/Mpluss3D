@@ -337,7 +337,7 @@ final class Base10Tasks
         }
         if ($twoWays !== null || $this->has(10)) {
             $tasks[] = self::task(sprintf('Vis tallet %d på to forskjellige måter. Skriv hvor mange av hver kloss du brukte.', $twoWays ?? 120),
-                $twoWays === null, null, true);
+                $twoWays === null, null, true) + ['number' => $twoWays ?? 120];
         }
 
         // Færrest mulig klosser

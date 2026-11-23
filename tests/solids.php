@@ -405,18 +405,19 @@ test('PDF-nett: store nett gir oversikt + ark i 1:1 med skjøter; skalert er tyd
     ok(str_contains($s, '(SKALERT'), 'skalert er merket');
 });
 
-test('PDF-oppgaver: seks A4-sider for alle figurer og nivåer, tekst innenfor arket', function () use ($sol, $shapes, $k) {
+test('PDF-oppgaver: fem A4-sider for alle figurer og nivåer, tekst innenfor arket', function () use ($sol, $shapes, $k) {
     foreach ($shapes as $sh) {
         foreach ([1, 2, 3] as $lv) {
             $pdf = $sol->renderPdf($sol->validate(['shape' => $sh, 'document' => 'tasks', 'level' => $lv]));
             $c = pdfContent($pdf);
             $pages = preg_split('/(?=BT \/F\d+ [\d.]+ Tf ET\s*\n?.*?M\+ 3D)/s', $c);
-            eq(6, substr_count($pdf, '/Type /Page') - substr_count($pdf, '/Type /Pages'), "$sh nivå $lv");
+            eq(5, substr_count($pdf, '/Type /Page') - substr_count($pdf, '/Type /Pages'), "$sh nivå $lv");
+            eq([1, 2, 3, 4, 5], LabelPdf::lastAnswerPages(), "$sh nivå $lv: alle sidene har fasit");
             foreach (pdfPages($pdf) as $i => $pg) {
                 ok(!textOutside($pg), "$sh nivå $lv side " . ($i + 1) . ': tekst utenfor arket ' . implode(' ', textOutside($pg)));
                 ok($pg['w'] > $pg['h'], "$sh nivå $lv side " . ($i + 1) . ': skal være liggende');
             }
-            foreach (['(Undersøk figuren)', '(Mål figuren)', '(Overflateareal)', '(Volum)', '(Fra papir til romfigur)', '(Fasit)'] as $t) {
+            foreach (['(Undersøk figuren)', '(Mål figuren)', '(Overflateareal)', '(Volum)', '(Fra papir til romfigur)'] as $t) {
                 ok(str_contains($c, LabelPdf::enc($t)), "$sh nivå $lv: mangler $t");
             }
         }

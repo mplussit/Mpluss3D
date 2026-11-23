@@ -115,7 +115,6 @@
                     <p class="field-error" data-error-for="find_count"></p>
                 </div>
             </div>
-            <label class="check"><input type="checkbox" id="f-answer_key"> <span><strong>Fasit</strong> for læreren</span></label>
 
             <hr class="rule">
 

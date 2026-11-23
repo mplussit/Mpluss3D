@@ -10,6 +10,10 @@
  * altså nøyaktig den samme fila læreren får. Fanenavnene kommer fra serveren
  * (X-Page-Titles). PDF-ene hentes på nytt når innstillingene endres.
  *
+ * Fasit: serveren sier hvilke sider som har svar (X-Answer-Pages). Da hentes
+ * også fasiten (samme forespørsel med &fasit=1), og over forhåndsvisningen av
+ * disse sidene står «Oppgave | Fasit». Valget gjelder for alle sidene til det endres.
+ *
  * Bruk:
  *   const sheets = initSheets({
  *       threeD: { group: '#mode-options', label: 'Klossene' },   // eller bare label
@@ -45,19 +49,30 @@ export function initSheets({ threeD = {}, docs = [] }) {
     pane.className = 'sheet-pane';
     pane.hidden = true;
     pane.innerHTML = `
+        <div class="sheet-variant segmented segmented-compact" role="radiogroup" aria-label="Oppgave eller fasit" hidden>
+            <label><input type="radio" name="sheet-variant" value="task" checked> Oppgave</label>
+            <label><input type="radio" name="sheet-variant" value="fasit"> Fasit</label>
+        </div>
         <div class="sheet-stage"><canvas class="sheet-canvas" role="img"></canvas><p class="sheet-note" role="status" hidden></p></div>
         <p class="hint sheet-hint">Forhåndsvisningen er den samme PDF-en som du laster ned.</p>`;
     wrap.querySelector('.viewer-surface').after(pane);
     const stage = pane.querySelector('.sheet-stage');
     const canvas = pane.querySelector('canvas');
     const note = pane.querySelector('.sheet-note');
+    const variant = pane.querySelector('.sheet-variant');
+    const hint = pane.querySelector('.sheet-hint');
+    variant.addEventListener('change', () => {
+        state.fasit = variant.querySelector('input:checked')?.value === 'fasit';
+        drawPage();
+    });
 
     const group = threeD.group ? document.querySelector(threeD.group) : null;
     if (group) group.closest('.control-group')?.setAttribute('hidden', '');
 
     const state = {
         active: { kind: '3d', index: 0 },
-        loaded: docs.map(() => ({ key: null, doc: null, bytes: null, titles: [], error: null })),
+        loaded: docs.map(() => ({ key: null, doc: null, bytes: null, titles: [], answers: [], fasit: null, error: null })),
+        fasit: false,          // vis fasiten på sidene som har en
         seq: 0,
         timer: null,
         renderTask: null,
@@ -82,7 +97,7 @@ export function initSheets({ threeD = {}, docs = [] }) {
             }
             const n = d.doc ? d.doc.numPages : 0;
             for (let p = 1; p <= n; p++) {
-                pages.push({ doc: di, page: p, label: d.titles[p - 1] || `Side ${p}` });
+                pages.push({ doc: di, page: p, label: d.titles[p - 1] || `Side ${p}`, answer: d.answers.includes(p) });
             }
         });
         return pages;
@@ -156,6 +171,25 @@ export function initSheets({ threeD = {}, docs = [] }) {
         state.timer = setTimeout(load, DEBOUNCE_MS);
     }
 
+    /** Henter én PDF. Med fasit: samme forespørsel med &fasit=1. */
+    async function fetchPdf(req, fasit) {
+        const url = fasit ? req.url + (req.url.includes('?') ? '&' : '?') + 'fasit=1' : req.url;
+        const res = req.body
+            ? await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(req.body) })
+            : await fetch(url);
+        const type = res.headers.get('Content-Type') || '';
+        if (!res.ok || !type.includes('application/pdf')) {
+            const data = await res.json().catch(() => ({}));
+            throw new Error(data.error || 'Arket kunne ikke lages.');
+        }
+        const titles = parseTitles(res.headers.get('X-Page-Titles'));
+        const answers = parseList(res.headers.get('X-Answer-Pages'));
+        const bytes = new Uint8Array(await res.arrayBuffer());
+        // pdf.js tar over bufferen, så den får en kopi. Originalen brukes av PDF-dialogen.
+        const doc = await pdfjs.getDocument({ data: bytes.slice(), isEvalSupported: false }).promise;
+        return { doc, bytes, titles, answers };
+    }
+
     async function load() {
         const seq = ++state.seq;
         await Promise.all(docs.map(async (d, i) => {
@@ -164,38 +198,52 @@ export function initSheets({ threeD = {}, docs = [] }) {
             const cur = state.loaded[i];
             if (cur.key === key && (cur.doc || cur.error)) return;
             try {
-                const res = req.body
-                    ? await fetch(req.url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(req.body) })
-                    : await fetch(req.url);
-                const type = res.headers.get('Content-Type') || '';
-                if (!res.ok || !type.includes('application/pdf')) {
-                    const data = await res.json().catch(() => ({}));
-                    throw new Error(data.error || 'Arket kunne ikke lages.');
-                }
-                const titles = parseTitles(res.headers.get('X-Page-Titles'));
-                const data = new Uint8Array(await res.arrayBuffer());
-                // pdf.js tar over bufferen, så den får en kopi. Originalen brukes av PDF-dialogen.
-                const doc = await pdfjs.getDocument({ data: data.slice(), isEvalSupported: false }).promise;
-                if (seq !== state.seq) { doc.destroy(); return; }
+                const got = await fetchPdf(req, false);
+                if (seq !== state.seq) { got.doc.destroy(); return; }
                 cur.doc?.destroy();
-                Object.assign(cur, { key, doc, bytes: data, titles, error: null });
+                cur.fasit?.doc.destroy();
+                Object.assign(cur, { key, doc: got.doc, bytes: got.bytes, titles: got.titles, answers: got.answers, fasit: null, error: null });
             } catch (err) {
                 if (seq !== state.seq) return;
                 cur.doc?.destroy();
-                Object.assign(cur, { key, doc: null, bytes: null, titles: [], error: err.message || 'Arket kunne ikke lages.' });
+                cur.fasit?.doc.destroy();
+                Object.assign(cur, { key, doc: null, bytes: null, titles: [], answers: [], fasit: null, error: err.message || 'Arket kunne ikke lages.' });
             }
         }));
         if (seq !== state.seq) return;
         renderBar();
         collect.refresh();
         if (state.active.kind === 'pdf') drawPage();
+
+        // Fasiten etterpå, for dokumentene som har sider med svar.
+        await Promise.all(docs.map(async (d, i) => {
+            const cur = state.loaded[i];
+            if (!cur.doc || !cur.answers.length || cur.fasit) return;
+            try {
+                const got = await fetchPdf(d.request(), true);
+                if (seq !== state.seq) { got.doc.destroy(); return; }
+                cur.fasit = { doc: got.doc, bytes: got.bytes };
+            } catch {
+                /* fasiten mangler; oppgaven vises fortsatt */
+            }
+        }));
+        if (seq !== state.seq) return;
+        collect.refresh();
+        if (state.active.kind === 'pdf' && state.fasit) drawPage();
     }
 
     async function drawPage() {
         const page = pdfPages()[state.active.index];
+        variant.hidden = !page?.answer;
         if (!page) return showNote('Lager arkene …');
         if (page.error) return showNote(page.error);
-        const pdfPage = await state.loaded[page.doc].doc.getPage(page.page);
+        const d = state.loaded[page.doc];
+        const showFasit = state.fasit && page.answer;
+        hint.textContent = showFasit
+            ? 'Fasiten er de samme sidene med svarene fylt inn. Last den ned med PDF-knappen øverst.'
+            : 'Forhåndsvisningen er den samme PDF-en som du laster ned.';
+        if (showFasit && !d.fasit) return showNote('Lager fasiten …');
+        const pdfPage = await (showFasit ? d.fasit.doc : d.doc).getPage(page.page);
         const zoom = window.m3dScale?.get() ?? 1;
         const box = stage.getBoundingClientRect();
         const unscaled = pdfPage.getViewport({ scale: 1 });
@@ -210,7 +258,7 @@ export function initSheets({ threeD = {}, docs = [] }) {
         canvas.height = Math.round(viewport.height);
         canvas.style.width = `${Math.round(unscaled.width * fit)}px`;
         canvas.style.height = `${Math.round(unscaled.height * fit)}px`;
-        canvas.setAttribute('aria-label', `${page.label}, side ${page.page} i PDF-en`);
+        canvas.setAttribute('aria-label', `${page.label}${showFasit ? ' (fasit)' : ''}, side ${page.page} i PDF-en`);
         note.hidden = true;
         canvas.hidden = false;
         const task = pdfPage.render({ canvas, canvasContext: canvas.getContext('2d'), viewport });
@@ -246,6 +294,7 @@ export function initSheets({ threeD = {}, docs = [] }) {
     const collect = initCollect({
         documents: () => state.loaded.map((d) => ({
             bytes: d.bytes, titles: d.titles, numPages: d.doc ? d.doc.numPages : 0, error: d.error,
+            answers: d.answers, fasitBytes: d.fasit?.bytes ?? null,
         })),
         loading: () => docs.length > 0 && state.loaded.some((d) => !d.doc && !d.error),
     });
@@ -253,6 +302,15 @@ export function initSheets({ threeD = {}, docs = [] }) {
     wrap.dataset.tab = '3d';
     renderBar();
     return { refresh, select };
+}
+
+function parseList(header) {
+    try {
+        const list = JSON.parse(header || '[]');
+        return Array.isArray(list) ? list.map(Number) : [];
+    } catch {
+        return [];
+    }
 }
 
 function parseTitles(header) {

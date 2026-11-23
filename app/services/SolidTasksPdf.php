@@ -2,14 +2,14 @@
 declare(strict_types=1);
 
 /**
- * Oppgave-PDF for en romfigur: fem oppgavesider og en fasitside for læreren.
+ * Oppgave-PDF for en romfigur: fem oppgavesider. Fasiten er de samme sidene
+ * med svarene fylt inn (api.php?…&fasit=1).
  *
  *   1  Undersøk figuren       (med tegning av figuren)
  *   2  Mål figuren            (tegning med mål og «Opplysninger på arket»)
  *   3  Overflateareal
  *   4  Volum
  *   5  Fra papir til romfigur
- *   6  Fasit
  *
  * Oppgavene lages av SolidTasks fra den felles geometrimodellen. Samme
  * utseende som de andre oppgave-PDF-ene (WorksheetPdf). Tekst med π, √ og ≈
@@ -17,7 +17,7 @@ declare(strict_types=1);
  */
 final class SolidTasksPdf extends WorksheetPdf
 {
-    private const PAGES = 6;
+    private const PAGES = 5;
     private const LEVELS = [1 => 'Nivå 1 – Utforsk', 2 => 'Nivå 2 – Mål og sammenlign', 3 => 'Nivå 3 – Beregn'];
 
     private array $p;
@@ -31,12 +31,11 @@ final class SolidTasksPdf extends WorksheetPdf
     {
         $this->p = $p;
         $this->solid = $this->model->solid($p);
-        $this->newDocument($this->solid->name() . ' – oppgaver');
+        $this->newDocument($this->solid->name() . ' – oppgaver', !empty($p['_fasit']));
         $pages = (new SolidTasks($this->solid, $p['level']))->pages();
         foreach ($pages as $i => $page) {
             $this->taskPage($i + 1, $page);
         }
-        $this->answerPage($pages);
         return $this->pdf->Output('S');
     }
 
@@ -74,55 +73,10 @@ final class SolidTasksPdf extends WorksheetPdf
         $sections = array_map(fn($s) => [
             'title' => $s['title'],
             'intro' => $s['intro'],
-            'tasks' => array_map(fn($t) => ['tokens' => $this->richTokens($t['tokens'])], $s['tasks']),
+            'tasks' => array_map(fn($t) => ['tokens' => $this->richTokens($t['tokens'])]
+                + array_intersect_key($t, ['answer' => 1, 'answers' => 1]), $s['tasks']),
         ], $page['sections']);
         $this->drawSections($sections, $y);
-        $this->footer();
-    }
-
-    private function answerPage(array $pages): void
-    {
-        $y = $this->header(self::PAGES, 'Fasit', 'For læreren. Svarene er regnet ut fra målene til figuren og avrundet til én desimal. '
-            . 'Målte verdier kan avvike litt.');
-        $pdf = $this->pdf;
-        $W = $this->contentW();
-        foreach ($pages as $i => $page) {
-            $rows = [];
-            $n = 1;
-            foreach ($page['sections'] as $sec) {
-                foreach ($sec['tasks'] as $t) {
-                    if (!empty($sec['steps'])) {
-                        $n++;
-                        continue;
-                    }
-                    $rows[] = [$n++, (string) $t['answer']];
-                }
-            }
-            if (!$rows) {
-                continue;
-            }
-            if ($y + 10 > $this->bottom()) {
-                break;
-            }
-            $pdf->SetFont('Helvetica', 'B', 10.5);
-            $pdf->SetTextColor(...self::INK);
-            $pdf->TextUtf8(self::M, $y + 4, 'Side ' . ($i + 1) . ': ' . $page['title']);
-            $y += 7;
-            foreach ($rows as [$k, $answer]) {
-                $lines = $this->wrapTokens($this->richTokens([['text', $answer]]), $W - 10, 9.5);
-                if ($y + 4.6 * count($lines) > $this->bottom()) {
-                    break 2;
-                }
-                $pdf->SetFont('Helvetica', 'B', 9.5);
-                $pdf->SetTextColor(...self::ACCENT);
-                $pdf->TextUtf8(self::M, $y + 3.2, $k . '.');
-                foreach ($lines as $line) {
-                    $this->drawTokens($line, self::M + 8, $y + 2.2, 9.5);
-                    $y += 4.6;
-                }
-            }
-            $y += 3;
-        }
         $this->footer();
     }
 

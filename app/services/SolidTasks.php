@@ -102,7 +102,7 @@ final class SolidTasks
             $more = [];
             if (!$this->curved) {
                 $more[] = $this->task('Regn ut: antall flater − antall kanter + antall hjørner. Hva får du?', ['box'],
-                    "{$c['faces']} − {$c['edges']} + {$c['vertices']} = 2 (Eulers formel gjelder alle slike figurer)");
+                    "2 ({$c['faces']} − {$c['edges']} + {$c['vertices']} = 2, Eulers formel)");
             }
             $sym = $this->s->symmetryPlanes();
             $more[] = $this->task('Et symmetriplan deler figuren i to speilbilder. Hvor mange symmetriplan har figuren?', ['line'],
@@ -436,10 +436,27 @@ final class SolidTasks
     private function task(string $text, array $fields, ?string $answer): array
     {
         $tokens = [['text', $text . ' ']];
+        $units = [];        // enheten etter hvert svarfelt ('' hvis ingen)
         foreach ($fields as $f) {
-            $tokens[] = str_starts_with($f, 'text:') ? ['text', ' ' . substr($f, 5) . ' '] : [$f];
+            if (str_starts_with($f, 'text:')) {
+                $tokens[] = ['text', ' ' . substr($f, 5) . ' '];
+                if ($units) {
+                    $units[count($units) - 1] = trim(rtrim(substr($f, 5), '= '));
+                }
+            } else {
+                $tokens[] = [$f];
+                $units[] = '';
+            }
         }
-        return ['tokens' => $tokens, 'answer' => $answer];
+        $task = ['tokens' => $tokens, 'answer' => $answer];
+        if ($answer !== null && array_filter($units)) {
+            // Enheten står etter svarfeltet, så fasiten i feltet er bare tallet.
+            // To felt («… mm = … cm»): svaret deles ved « = ».
+            $parts = count($units) > 1 ? explode(' = ', $answer, count($units)) : [$answer];
+            $task['answers'] = array_map(fn($part, $unit) => $unit === '' ? $part
+                : trim(preg_replace('/\s*' . preg_quote($unit, '/') . '(?=\s|$|\))/u', '', (string) $part, 1)), $parts, array_slice($units, 0, count($parts)));
+        }
+        return $task;
     }
 
     private function cm(float $mm): string

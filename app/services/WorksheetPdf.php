@@ -10,12 +10,18 @@ declare(strict_types=1);
  *
  * Oppgaver består av «tokens» som brytes over flere linjer ved behov:
  *   ['text', 'Bygg tallet 24.']   tekst (brytes mellom ord)
- *   ['box']                       tom svarrute
- *   ['line']                      svarlinje
+ *   ['box', svar]                 tom svarrute (svaret vises bare i fasiten)
+ *   ['line', svar]                svarlinje
  *   ['tag', 'Papiroppgave']       liten merkelapp
  *   ['br']                        linjeskift
  * Underklasser kan legge til egne tokens (f.eks. stablede brøker) ved å
  * overstyre customTokenWidth(), drawCustomToken() og customLineHeight().
+ *
+ * Fasit: med $fasit = true tegnes de samme sidene, men med svarene fylt inn
+ * (rødt) i rutene og på linjene. En oppgave gir svarene med 'answers' (ett per
+ * svarfelt, i rekkefølge) eller 'answer' (når den har ett svarfelt, eller ingen:
+ * da skrives svaret etter oppgaven). Sider med svar merkes (LabelPdf::MarkAnswerPage())
+ * i begge utgavene, og fasitsidene får «FASIT» i toppteksten.
  *
  * Alle mål i mm. Alle sidene er liggende A4 (som i M+ matematikk), også
  * lærerveiledningene og sidene i målestokk 1:1. Oppgavene står i to spalter,
@@ -31,6 +37,13 @@ abstract class WorksheetPdf
     protected const SOFT = [243, 239, 231];
 
     protected LabelPdf $pdf;
+    /** Fasitutgaven: svarene fylles inn. */
+    protected bool $fasit = false;
+    protected const ANSWER = [200, 30, 30];
+    /** @var array<int,true> sider som allerede er merket med svar */
+    private array $answerMarked = [];
+    /** Der «Side n av m» begynner i toppteksten (FASIT står til venstre for den). */
+    private float $sideX = 0.0;
 
     /** Øverst til venstre på hver side, f.eks. «M+ 3D  ·  BRØKSIRKLER». */
     abstract protected function kicker(): string;
@@ -40,10 +53,12 @@ abstract class WorksheetPdf
     /** Bunnteksten (innstillingene), samme på alle sider. */
     abstract protected function footerText(): string;
 
-    protected function newDocument(string $title): void
+    protected function newDocument(string $title, bool $fasit = false): void
     {
+        $this->fasit = $fasit;
+        $this->answerMarked = [];
         $this->pdf = new LabelPdf('L', 'A4');
-        $this->pdf->SetTitle(LabelPdf::enc($title));
+        $this->pdf->SetTitle(LabelPdf::enc($title . ($fasit ? ' – fasit' : '')));
         $this->pdf->SetCreator('M+ 3D');
     }
 
@@ -81,7 +96,8 @@ abstract class WorksheetPdf
         $pdf->SetFont('Helvetica', '', 8);
         $pdf->SetTextColor(...self::INK2);
         $s = LabelPdf::enc("Side $page av " . $this->pageCount());
-        $pdf->Text(self::M + $W - $pdf->GetStringWidth($s), 13, $s);
+        $this->sideX = self::M + $W - $pdf->GetStringWidth($s);
+        $pdf->Text($this->sideX, 13, $s);
 
         $pdf->SetFont('Helvetica', 'B', 22);
         $pdf->SetTextColor(...self::INK);
@@ -152,6 +168,111 @@ abstract class WorksheetPdf
             $lines += $n;
         }
         return $lines * $lineH;
+    }
+
+    /* ================================================== Fasit */
+
+    /**
+     * Gjeldende side har svar. Første gang på en side: merkes for fasiten, og
+     * i fasitutgaven får toppteksten «FASIT».
+     */
+    protected function markAnswer(): void
+    {
+        $page = $this->pdf->PageNo();
+        if (isset($this->answerMarked[$page])) {
+            return;
+        }
+        $this->answerMarked[$page] = true;
+        $this->pdf->MarkAnswerPage();
+        if ($this->fasit) {
+            $pdf = $this->pdf;
+            $pdf->SetFont('Helvetica', 'B', 8);
+            $pdf->SetTextColor(...self::ANSWER);
+            $pdf->Text($this->sideX - 5 - $pdf->GetStringWidth('FASIT'), 13, 'FASIT');
+        }
+    }
+
+    /** Svarteksten med størrelse som får plass i bredden $w (ned til $min pt). Setter fonten og returnerer størrelsen. */
+    private function answerFont(string $s, float $size, float $w, float $min = 5.5): float
+    {
+        $pdf = $this->pdf;
+        $pdf->SetFont('Helvetica', 'B', $size);
+        $tw = $pdf->RichWidth($s);
+        if ($tw > $w) {
+            $size = max($min, $size * $w / $tw);
+            $pdf->SetFont('Helvetica', 'B', $size);
+        }
+        $pdf->SetTextColor(...self::ANSWER);
+        return $size;
+    }
+
+    /** Svar midt i en rute (x, y, bredde, høyde). Tegnes bare i fasiten. */
+    protected function answerInBox(float $x, float $y, float $w, float $h, string $s, float $size = 11): void
+    {
+        if ($s === '') {
+            return;
+        }
+        $this->markAnswer();
+        if (!$this->fasit) {
+            return;
+        }
+        $pt = $this->answerFont($s, $size, $w - 0.8);
+        $this->pdf->TextRich($x + $w / 2, $y + $h / 2 + $this->capH($pt) / 2, $s, 'C');
+    }
+
+    /** Svar på en svarlinje: fra x, grunnlinje $base, høyst $w bredt. Tegnes bare i fasiten. */
+    protected function answerOnLine(float $x, float $base, float $w, string $s, float $size = 10.5): void
+    {
+        if ($s === '') {
+            return;
+        }
+        $this->markAnswer();
+        if (!$this->fasit) {
+            return;
+        }
+        $this->answerFont($s, $size, $w, 6.0);
+        $this->pdf->TextRich($x, $base, $s);
+    }
+
+    /** «6 (1 krum)» → ['6', '(1 krum)']: selve svaret og forklaringen. @return array{string,string} */
+    protected static function splitAnswer(string $s): array
+    {
+        $i = mb_strpos($s, ' (');
+        return $i === false ? [$s, ''] : [mb_substr($s, 0, $i), mb_substr($s, $i + 1)];
+    }
+
+    /**
+     * Hvilket element i et token som er svaret, eller null hvis tokenet ikke
+     * er et svarfelt. Underklasser legger til egne svarfelt.
+     */
+    protected function answerSlot(string $type): ?int
+    {
+        return in_array($type, ['box', 'line'], true) ? 1 : null;
+    }
+
+    /**
+     * Legger svarene inn i svarfeltene. Returnerer [tokens, svar uten svarfelt].
+     * @return array{0:list<array>,1:?string}
+     */
+    protected function fillAnswers(array $task): array
+    {
+        $tokens = $task['tokens'];
+        $blanks = [];
+        foreach ($tokens as $i => $t) {
+            if ($this->answerSlot($t[0]) !== null) {
+                $blanks[] = $i;
+            }
+        }
+        $answer = isset($task['answer']) ? (string) $task['answer'] : '';
+        $answers = $task['answers'] ?? ($blanks && $answer !== '' && count($blanks) === 1 ? [$answer] : []);
+        foreach ($blanks as $k => $i) {
+            if (isset($answers[$k]) && $answers[$k] !== '' && $answers[$k] !== null) {
+                $slot = $this->answerSlot($tokens[$i][0]);
+                $tokens[$i] = array_pad($tokens[$i], $slot, null);
+                $tokens[$i][$slot] = $answers[$k];
+            }
+        }
+        return [$tokens, !$blanks && $answer !== '' ? $answer : null];
     }
 
     /* ================================================== Tekst i spalter */
@@ -320,7 +441,8 @@ abstract class WorksheetPdf
             }
             $y += 3;
             foreach ($sec['tasks'] as $task) {
-                $lines = $this->wrapTokens($task['tokens'], $W - 9, 11);
+                [$tokens, $loose] = $this->fillAnswers($task);
+                $lines = $this->wrapTokens($tokens, $W - 9, 11);
                 if ($y + $this->linesHeight($lines) > $bottom) {
                     if (!$nextColumn()) {
                         break 2;
@@ -329,9 +451,14 @@ abstract class WorksheetPdf
                 $pdf->SetFont('Helvetica', 'B', 11);
                 $pdf->SetTextColor(...self::ACCENT);
                 $pdf->TextUtf8($x, $y + $this->lineHeight($lines[0]) / 2 + 1.4, $no . '.');
-                foreach ($lines as $line) {
+                foreach ($lines as $li => $line) {
                     $lh = $this->lineHeight($line);
-                    $this->drawTokens($line, $x + 9, $y + $lh / 2, 11);
+                    $this->drawTokens($line, $x + 9, $y + $lh / 2, 11, $x + $W);
+                    if ($loose !== null && $li === count($lines) - 1) {
+                        // Oppgaven har ikke noe svarfelt: svaret står etter oppgaven.
+                        $end = $x + 9 + $this->tokensWidth($line, 11) + 3;
+                        $this->answerOnLine($end, $y + $lh / 2 + $this->capH(11) / 2, $x + $W - $end, $loose, 10);
+                    }
                     $y += $lh;
                 }
                 $no++;
@@ -469,10 +596,12 @@ abstract class WorksheetPdf
         return $lines;
     }
 
-    protected function drawTokens(array $tokens, float $x, float $yMid, float $size): void
+    /** $maxX: høyre kant av spalten (et svar på en linje sist i raden kan gå helt dit). */
+    protected function drawTokens(array $tokens, float $x, float $yMid, float $size, ?float $maxX = null): void
     {
         $pdf = $this->pdf;
-        foreach ($tokens as $t) {
+        $last = array_key_last($tokens);
+        foreach ($tokens as $ti => $t) {
             if (!$this->drawCustomToken($t, $x, $yMid, $size)) {
                 switch ($t[0]) {
                     case 'text':
@@ -494,11 +623,25 @@ abstract class WorksheetPdf
                         $pdf->SetDrawColor(...self::INK);
                         $pdf->SetLineWidth(0.25);
                         $pdf->RectExact($x + 0.5, $yMid - 3.6, 8, 7.2, 'D');
+                        [$head, $tail] = self::splitAnswer((string) ($t[1] ?? ''));
+                        $this->answerInBox($x + 0.5, $yMid - 3.6, 8, 7.2, $head, $size);
+                        if ($tail !== '' && $ti === $last && $maxX !== null) {
+                            // Forklaringen i parentes står etter ruten.
+                            $this->answerOnLine($x + 10.5, $yMid + $this->capH($size) / 2, $maxX - $x - 11, $tail, $size * 0.85);
+                        }
                         break;
                     case 'line':
                         $pdf->SetDrawColor(...self::INK2);
                         $pdf->SetLineWidth(0.25);
                         $pdf->LineExact($x + 1, $yMid + $this->capH($size) / 2 + 0.8, $x + 29, $yMid + $this->capH($size) / 2 + 0.8);
+                        $answer = (string) ($t[1] ?? '');
+                        $room = 28.0;
+                        if ($ti === $last && $maxX !== null) {
+                            $room = $maxX - $x - 2;
+                        } else {
+                            $answer = self::splitAnswer($answer)[0];     // tekst etter linja (f.eks. enheten) skal ikke dekkes
+                        }
+                        $this->answerOnLine($x + 1.5, $yMid + $this->capH($size) / 2, $room, $answer, $size * 0.95);
                         break;
                 }
             }

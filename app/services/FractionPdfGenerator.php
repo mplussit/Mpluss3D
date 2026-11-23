@@ -28,7 +28,7 @@ final class FractionPdfGenerator extends WorksheetPdf
     public function render(array $params): string
     {
         $this->p = $params;
-        $this->newDocument('Brøksirkler – ' . FractionModel::fmt($params['diameter']) . ' mm');
+        $this->newDocument('Brøksirkler – ' . FractionModel::fmt($params['diameter']) . ' mm', !empty($params['_fasit']));
 
         $tasks = new FractionTasks($this->model, $params['denominators']);
         $this->pageOverview();
@@ -216,12 +216,14 @@ final class FractionPdfGenerator extends WorksheetPdf
             $cxL = $x0 + $cellW / 2 - 22;
             $cxR = $x0 + $cellW / 2 + 22;
             $this->drawCircle($cxL, $cy, $r, $e['a'], $e['k'], $this->model->color($e['a'])['hex']);
-            $this->drawCircle($cxR, $cy, $r, $e['b'], 0, $this->model->color($e['b'])['hex']);
+            // Fasit: like mye av sirkelen til høyre er fargelagt.
+            $this->drawCircle($cxR, $cy, $r, $e['b'], $this->fasit ? $e['answer'] : 0, $this->model->color($e['b'])['hex']);
             $pdf->SetFont('Helvetica', 'B', 16);
             $pdf->SetTextColor(...self::INK);
             $pdf->TextCentered($x0 + $cellW / 2, $cy + 2, '=');
-            $tw = $this->tokensWidth($e['tokens'], 13);
-            $this->drawTokens($e['tokens'], $x0 + $cellW / 2 - $tw / 2, $cy + $r + ($this->landscape() ? 9 : 10), 13);
+            [$tokens] = $this->fillAnswers($e);
+            $tw = $this->tokensWidth($tokens, 13);
+            $this->drawTokens($tokens, $x0 + $cellW / 2 - $tw / 2, $cy + $r + ($this->landscape() ? 9 : 10), 13);
         }
         $this->footer();
     }
@@ -386,7 +388,12 @@ final class FractionPdfGenerator extends WorksheetPdf
         return $w;
     }
 
-    /* Brøk-tokens i oppgavene: ['frac', teller, nevner] og ['fracbox', nevner] (tom teller). */
+    /* Brøk-tokens i oppgavene: ['frac', teller, nevner] og ['fracbox', nevner, svar] (tom teller; svaret er «teller/nevner»). */
+
+    protected function answerSlot(string $type): ?int
+    {
+        return $type === 'fracbox' ? 2 : parent::answerSlot($type);
+    }
 
     protected function customLineHeight(array $types): ?float
     {
@@ -413,7 +420,11 @@ final class FractionPdfGenerator extends WorksheetPdf
             return true;
         }
         if ($t[0] === 'fracbox') {
-            $this->drawFraction($x, $yMid, 0, $t[1], $size * 0.85, true);
+            $w = $this->drawFraction($x, $yMid, 0, $t[1], $size * 0.85, true);
+            if (isset($t[2])) {
+                $cap = $this->capH($size * 0.85);
+                $this->answerInBox($x + 0.3, $yMid - $cap - 2.4, $w - 0.6, $cap + 1.6, explode('/', (string) $t[2])[0], $size * 0.85);
+            }
             return true;
         }
         return false;

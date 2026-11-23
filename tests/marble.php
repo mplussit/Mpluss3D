@@ -244,11 +244,11 @@ test('kulespill: brett A, B og C – riktige hull på arket, og alle sidene merk
 
 test('kulespill: sidene – hullark per variant, eller ett felles med bokstaver og symboler', function () use ($marble, $mp) {
     $kinds = fn(array $in) => array_column($marble->describe($mp($in))['pages'], 'kind');
-    eq(['holes', 'tasks', 'key'], $kinds([]));
-    eq(['holes', 'tasks', 'holes', 'tasks', 'key'], $kinds(['variants' => 2]));
-    eq(['holes', 'values', 'tasks', 'values', 'tasks', 'key'], $kinds(['content' => 'letters', 'variants' => 2]));
-    eq(['holes', 'values'], $kinds(['content' => 'symbols', 'task_round' => false, 'task_calc' => false, 'task_find' => false, 'answer_key' => false]));
-    eq(['holes'], $kinds(['task_round' => false, 'task_find' => false, 'answer_key' => false]));
+    eq(['holes', 'tasks'], $kinds([]));
+    eq(['holes', 'tasks', 'holes', 'tasks'], $kinds(['variants' => 2]));
+    eq(['holes', 'values', 'tasks', 'values', 'tasks'], $kinds(['content' => 'letters', 'variants' => 2]));
+    eq(['holes', 'values'], $kinds(['content' => 'symbols', 'task_round' => false, 'task_calc' => false, 'task_find' => false]));
+    eq(['holes'], $kinds(['task_round' => false, 'task_find' => false]));
     // Mange oppgaver: oppgavearket fortsetter på en ny side.
     $long = $kinds(['content' => 'letters', 'balls' => 8, 'calc_count' => 12, 'calc_terms' => 5, 'find_count' => 8, 'find_size' => 3]);
     ok(count(array_keys($long, 'tasks')) >= 2, 'lange oppgaver skal gå over flere sider');
@@ -326,6 +326,32 @@ test('kulespill: PDF-en har de samme sidene og tekstene som forhåndsvisningen',
         }
     }
     eq('kulespill-a-ark-symboler.pdf', $marble->pdfFilename($mp(['content' => 'symbols'])));
+});
+
+test('kulespill: fasiten har de samme sidene, med svarene på oppgavearket', function () use ($marble, $mp, $allItems) {
+    foreach (['numbers', 'expressions', 'letters', 'symbols'] as $c) {
+        $p = $mp(['content' => $c, 'variants' => 2]);
+        $plain = $marble->sheets($p)->build()['pages'];
+        $fasit = $marble->sheets(['_fasit' => true] + $p)->build()['pages'];
+        eq(array_column($plain, 'label'), array_column($fasit, 'label'), "$c: samme sider");
+        eq(array_column($plain, 'answers'), array_column($fasit, 'answers'), "$c: samme sider med svar");
+        foreach ($plain as $i => $page) {
+            eq($page['kind'] === 'tasks', $page['answers'], "$c: «{$page['label']}» har svar bare på oppgavearket");
+        }
+        $red = fn(array $pages) => count(array_filter(iterator_to_array($allItems($pages), false), fn($it) => ($it['c'] ?? '') === '#c81e1e'));
+        eq(0, $red($plain), "$c: ingen svar uten fasit");
+        ok($red($fasit) > 0, "$c: svarene står i fasiten");
+        // Svaret på hvert regnestykke står i fasiten.
+        $texts = array_column(array_filter(iterator_to_array($allItems($fasit), false), fn($it) => $it['k'] === 'text'), 't');
+        foreach ($marble->sheets($p)->variants() as $v) {
+            foreach ($v['calc'] as $calc) {
+                ok(in_array((string) $calc['answer'], $texts, true), "$c: svaret {$calc['answer']} mangler");
+            }
+        }
+    }
+    $pdf = $marble->renderPdf(['_fasit' => true] + $mp());
+    eq([2], LabelPdf::lastAnswerPages());
+    ok(str_contains(pdfContent($pdf), '(FASIT) Tj'), 'FASIT øverst på siden');
 });
 
 test('kulespill: STL-filene og forhåndsbildet finnes, og ingen OpenSCAD-deler', function () use ($marble, $mdef, $mp) {

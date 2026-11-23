@@ -13,7 +13,7 @@ Modellene i dag:
 | **Brøksirkler** (`?side=broeksirkler`) | `fractions` | én fil per brøk + ZIP | oversikt, oppgaver og arbeidsflate (4 sider) |
 | **Base 10** (`?side=base10`) | `base10` | én fil per objekttype + ZIP | oversikt, bygg tall, veksling, regning og plassverditabell (6 sider) |
 | **Tallstaver** (`?side=tallstaver`) | `rods` | én fil per stavlengde + ZIP | lærerveiledning, tall, regning, brøk og arbeidsark (7 sider) |
-| **Romfigurer** (`?side=romfigurer`) | `solids` | én figur (massiv eller hul) | utbrettingsfigur i 1:1 med limfliker, og oppgaver på tre nivåer med fasit (6 sider) |
+| **Romfigurer** (`?side=romfigurer`) | `solids` | én figur (massiv eller hul) | utbrettingsfigur i 1:1 med limfliker, og oppgaver på tre nivåer med fasit (5 sider) |
 | **Regn med Lego** (`?side=regnmedlego`) | `lego` | én fil per ramme + ZIP | oversikt over rammene og regnestykket, og papiretiketter i faktisk størrelse |
 | **Kulespill** (`?side=kulespill`) | `marble` | kulespillet og bunnen (faste filer) | hullark i 1:1 under spillet, verdiark, oppgaver og fasit |
 
@@ -125,7 +125,7 @@ mplus-3d/
 │       ├── SolidModel.php          Romfigurer: validering, STL-deler, beskrivelse
 │       ├── SolidNetPdf.php         Romfigurer: PDF med utbrettingsfiguren
 │       ├── SolidTasks.php          Romfigurer: oppgaver etter figur og nivå
-│       ├── SolidTasksPdf.php       Romfigurer: oppgave-PDF med fasit
+│       ├── SolidTasksPdf.php       Romfigurer: oppgave-PDF (fasit med &fasit=1)
 │       ├── SolidDrawing.php        Romfigurer: strektegning av figuren i PDF
 │       ├── LegoShape.php           Regn med Lego: formen (sammenheng, utsparinger, arealer)
 │       ├── LegoText.php            Regn med Lego: tillatte tegn og tekstbredde
@@ -205,6 +205,16 @@ M+ 3D er også et produkt i produktvelgeren i M+ (fag `3d`, fra `menu__24.js` i 
 * **Ingen ZIP i grensesnittet.** «Last ned alle STL-filene» laster ned hver del som en vanlig .stl-fil, den ene etter den andre (`downloadAll()` i `public/js/ui.js`). Hver rad i utskriftslista har også sin egen STL-knapp. Nettleseren kan spørre én gang om siden får laste ned flere filer. `api.php?action=zip` finnes fortsatt, men brukes ikke av sidene.
 * **PDF-knappen og oppsamlings-PDF** (`public/js/collect.js`, som i M+ matematikk). PDF-knappen i toppfeltet åpner en dialog med sidene i PDF-fanene som avkrysningsbokser. «Lag PDF» laster ned de valgte sidene direkte. «Legg til i oppsamlings-PDF» kopierer dem ut med pdf-lib (fra jsDelivr) og lagrer dem i nettleseren (IndexedDB, databasen `mplus3d`), så læreren kan gå til en annen modell og legge til flere sider. Tallet på knappen viser hvor mange sider som er samlet. «Lag oppsamlings-PDF» slår alt sammen til én fil og tømmer oppsamlingen. «Merk ark med» skriver en tekst langs høyre kant på hver side, og filnavnet kan endres. Alt skjer i nettleseren, serveren lager bare de vanlige PDF-ene. De vanlige «Last ned PDF»-knappene i panelet virker som før.
 * En ny modellside trenger `<nav id="sheet-tabs" class="sheet-tabs"></nav>` øverst i `.viewer-wrap` og et kall til `initSheets()` i sidens skript, med `sheets.refresh()` etter hver endring.
+
+### Fasit
+
+Alle oppgavearkene har fasit: de samme sidene, med svarene fylt inn i rødt i rutene og på linjene, og «FASIT» i toppteksten.
+
+* **Serveren:** `api.php?action=pdf&…&fasit=1` lager fasiten med de samme parameterne. Begge utgavene har svarhodet `X-Answer-Pages` med sidene som har svar (for eksempel `[2,3,4,5]`). Sider uten svar, som lærerveiledningen og arbeidsflaten, er like i begge.
+* **Svarene:** en oppgave har `answer`, eller `answers` når den har flere svarfelt (ett svar per felt, i rekkefølge). `WorksheetPdf::fillAnswers()` legger svarene inn i tokenene (`['box', svar]`, `['line', svar]` og egne felt som `fracbox` og `pv`). En oppgave uten svarfelt får svaret etter oppgaven. En forklaring i parentes («6 (1 krum)») står etter ruten når det er plass. Teksten krympes så den får plass.
+* **Egne sider** tegner svarene med `answerInBox()` og `answerOnLine()`, for eksempel «Hvilket tall?» i base 10 og likeverdige brøker, der sirkelen til høyre fargelegges. Kulespillet har det samme i `MarbleSheets` (verdiene og svaret i «Regn med verdiene», og en løsning i «Finn hullene» med de andre under).
+* **Forhåndsvisningen** henter fasiten etter oppgavene. På sider med fasit står «Oppgave | Fasit» over arket, og valget gjelder for alle sidene til det endres. I PDF-dialogen står fasitsidene som «… – fasit» (ikke valgt fra start).
+* Den gamle fasitsiden i romfigurene (side 6) og i kulespillet (valget «Fasit for læreren») er erstattet av dette.
 
 ### Liggende ark
 
@@ -718,14 +728,13 @@ For sylinder og kjegle følger tellingen vanlig skolegeometri. Den krumme sidefl
 
 ### PDF-oppgaver (`SolidTasks`, `SolidTasksPdf`)
 
-Seks A4-sider i samme stil som de andre oppgave-PDF-ene:
+Fem A4-sider i samme stil som de andre oppgave-PDF-ene (fasit: de samme sidene med svarene, se «Fasit»):
 
 1. **Undersøk figuren:** navn, flater, kanter og hjørner, plane figurer, like flater, figuren sett ovenfra og forfra, Eulers formel og symmetriplan. Siden har en strektegning av figuren der skjulte kanter er stiplet.
 2. **Mål figuren:** måling med linjal, grunnflaten og omkretsen, og Pytagoras (skråhøyde, sidelinje, skrå side, romdiagonal). Tegningen viser målene, og boksen «Opplysninger på arket» har tallene eleven skal sammenligne med.
 3. **Overflateareal:** tell og sammenlign flater og ruter (nivå 1), arealet av hver flate og summen (nivå 2), og formel og dobling av målene (nivå 3).
 4. **Volum:** terninger på 1 cm³ for kube og prisme, «tre pyramider eller kjegler fyller prismet eller sylinderen», og to trekantprismer blir en eske (nivå 1). Grunnflate · høyde og ml (nivå 2), formel, dobling og samme volum (nivå 3).
 5. **Fra papir til romfigur:** klipp, brett, lim, sammenlign og undersøk. Spørsmålene er figurspesifikke, for eksempel hvorfor rektangelet er π · d langt, hvorfor kjeglens flate er en sektor, sektorvinkelen og skråhøyden.
-6. **Fasit** for læreren.
 
 Oppgavene velges etter figur og nivå. For eksempel får sylinder og kjegle ikke Euler-oppgaver, og kjeglen spør om toppunktet i stedet for hjørner. Alle svar regnes ut fra geometrimodellen og vises i cm med én desimal. Tekst med π, √ og ≈ skrives med Symbol-fonten, fordi standardfontene i FPDF ikke har disse tegnene.
 
@@ -842,8 +851,8 @@ Læreren velger:
 * **Oppgaver:**
   * *Kulerunde:* to tabeller (Runde 1 og 2) med 2–8 kuler, der eleven skriver det som står i hullet, verdien og summen.
   * *Regn med verdiene* (bokstaver og symboler): stykker som A + B – C med 2–5 ledd, en rute under hvert ledd til verdien og en svarrute. Kan begrenses til at summen aldri er under null underveis.
-  * *Finn hullene:* «[ ] + [ ] = 13» med to eller tre hull. Summene er ulike, og fasiten har alle løsningene.
-  * *Fasit* for læreren.
+  * *Finn hullene:* «[ ] + [ ] = 13» med to eller tre hull. Summene er ulike. Fasiten har én løsning i rutene og de andre under.
+  * Fasiten er oppgavearket med svarene fylt inn (se «Fasit»).
 * **Kulespill:** A, B eller C (radioknapper). Hullarket, verdiarket, oppgavene og fasiten lages for hullene på det valgte brettet, og alle sidene merkes med bokstaven (oransje rute ved tittelen, «Kulespill A» i toppteksten og bunnteksten, og en stor bokstav nederst til høyre på hullarket, under utskytingsbanen). 3D-visningen og STL-nedlastingen følger valget.
 * **Sett:** 1–10 sett med ulike verdier. Med tall og regnestykker får hvert sett sitt eget hullark. Med bokstaver og symboler er hullarket det samme for alle, og settene har hvert sitt verdiark og oppgaveark.
 * **Lag stykker** gir et nytt tilfeldig frø (`seed`). Alt innhold lages deterministisk av frøet (`MarbleRandom`, xorshift32), så samme valg gir alltid de samme arkene.
@@ -1015,7 +1024,7 @@ Testene dekker 172 tilfeller.
 * PDF-nett:
   * A4, 1:1-tekst, kontrollinje på nøyaktig 50 mm, kubens kanter 40 mm og sylinderens rektangel π · d
   * flersidig utskrift med oversikt og skjøter, og skalert utskrift tydelig merket
-* PDF-oppgaver: seks sider for alle figurer og nivåer, tekst innenfor arket, oppgaver som passer til figur og nivå, og fasit fra geometrimodellen
+* PDF-oppgaver: fem sider for alle figurer og nivåer, tekst innenfor arket, oppgaver som passer til figur og nivå, og fasit fra geometrimodellen
 * STL fra OpenSCAD:
   * alle figurer ved ytterverdiene, massive og hule: lukket, manifold, riktige mål, to skall når hul, og volum lik geometrimodellen innen 0,1 %
   * ingen overheng, heller ikke i hulrommet
@@ -1075,7 +1084,7 @@ Testene dekker 172 tilfeller.
 * regning: simulert veksling, inkludert når det mangler klosser
 * oppgaver i åtte sett: at klossene finnes, riktige svar, og at papiroppgaver er merket
 * PDF:
-  * seks sider, der side 6 er liggende
+  * seks liggende sider
   * tekst innenfor arket for små og store sett
   * innholdet på oppgavesidene
 
@@ -1207,14 +1216,13 @@ M+ 3D kjører som to Docker Swarm-stakker på samme server som M+. HAProxy sende
 * **Smale brikker kan mangle merking.** Ved 50 mm diameter blir 1/10 og 1/12 for smale til lesbar tekst (minst 4 mm). Læreren får beskjed, og brikkene er ellers gyldige.
 * **Forhåndsvisningens farger finnes ikke i STL.** STL har ikke farger. Fargen velges med filamentet.
 * **Den ytre diameteren følger STL-modellen.** Klaringen tas fra de radielle kantene, ikke fra ytterbuen. Hvis printeren gir litt større deler, blir sirkelen tilsvarende større. Avvik fra printeren kompenseres i sliceren (for eksempel med «XY-kompensasjon»).
-* **Oppgavene er faste maler.** De velges ut fra nevnerne, men er ikke tilpasset trinn. Det er heller ikke laget fasit.
+* **Oppgavene er faste maler.** De velges ut fra nevnerne, men er ikke tilpasset trinn.
 * **Genereringstid.** Med OpenSCAD 2021.01 (CGAL) tar en brikke med merking flere sekunder. Med Manifold tar den ca. 0,15 s. Et nytt sett med fem nevnere lages på rundt ett sekund med Manifold.
 * **Base 10: hundrere og tusenere er større enn rutene i plassverditabellen.** Med 10 mm enhet er en hundrer 100 mm bred, mens en kolonne på liggende A4 er 54 mm. PDF-en sier at de kan legges over kolonnen eller tegnes.
 * **Base 10: materialforbruket er et overslag.** Det bygger på 2 vegger og 15 % fyll. Sliceren gir nøyaktige tall.
 * **Base 10: tallbyggeren er bare en visning.** Den viser tall med ett siffer per plass, altså færrest mulig klosser. Andre måter å legge tallet på, som 12 tiere for 120, finnes på papiret (PDF side 4), men ikke i 3D-visningen.
 * **Tallstaver: tegneoppgaver er generelle.** Kan en oppgavetype ikke lages med settet, hentes tegneoppgavene fra et fullt sett. De handler derfor om staver settet ikke har, og må løses på arbeidsarket.
 * **Tallstaver: tallkombinasjonene viser høyst seks måter.** Antallet måter står under feltet (for eksempel 500 for lengde 20), men bare et variert utvalg vises i 3D.
-* **Tallstaver: ingen fasit i PDF-en.** Generatoren har fasit for hver oppgave (`answer`), og testene bruker den, men den skrives ikke ut ennå.
 * **Romfigurer: krumme flater i STL er mangekanter** med 128 sider. Avviket fra nettet er under 0,05 % (se «Polygonal STL og eksakt nett»).
 * **Romfigurer: hulrommet er lukket.** Det kan ikke fylles med vann eller sand, og taket i det er avrundet til 45°. Volumoppgavene gjelder figurens ytre mål.
 * **Romfigurer: papirets tykkelse er ikke tatt med i nettet.** Med vanlig papir er feilen under 0,5 mm.
@@ -1246,7 +1254,7 @@ M+ 3D kjører som to Docker Swarm-stakker på samme server som M+. HAProxy sende
 * **Romfigurer: trekantprismet ligger på det største rektangelet.** Da peker ingen flater nedover. Trekantene er likevel grunnflatene i oppgavene og egenskapene.
 * **Romfigurer: sirklene i sylinder- og kjeglenettet er egne deler.** Limtennene sitter på rektangelet og sektoren, ikke på sirklene. Det er lettere å lime, og «Utbrettingsfigur» viser fortsatt alle flatene.
 * **Romfigurer: valg av visning er avkrysninger.** «Vis flater» og «Vis kanter og hjørner» kan kombineres. Vanlig romfigur er begge av, som spesifikasjonens tre visningsmodi.
-* **Romfigurer: fasit i oppgave-PDF-en** som side 6, i tillegg til de fem oppgavesidene i spesifikasjonen.
+* **Romfigurer: fasit** som egne fasitsider (de fem oppgavesidene med svarene), ikke som en side i oppgave-PDF-en.
 * **Romfigurer: «Hjørner / toppunkt» for kjeglen.** Spesifikasjonen skiller mellom hjørner og toppunkt. Kjeglen vises med «1 (toppunktet)».
 * **Tallstaver: avrunding bare langs staven.** Spesifikasjonen åpnet for dette. Plane, hele endeflater gir nøyaktige lengder når stavene ligger ende mot ende. Kantene mot byggeplaten får fas i stedet for avrunding, som i Base 10.
 * **Tallstaver: tallet står i den midterste enheten når inndelingen er på.** For partall er det ingen midterste enhet, så tallet står i enheten til venstre for midten. Da overlapper det aldri en rille, som spesifikasjonen krever.

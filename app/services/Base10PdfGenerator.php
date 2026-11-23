@@ -34,7 +34,7 @@ final class Base10PdfGenerator extends WorksheetPdf
         $this->p = $params;
         $this->tasks = new Base10Tasks($this->model->countsByValue($params));
         $this->places = array_values(array_filter(Base10Tasks::PLACES, fn($v) => $this->tasks->has($v)));
-        $this->newDocument('Base 10 – ' . Base10Model::fmt($params['unit']) . ' mm');
+        $this->newDocument('Base 10 – ' . Base10Model::fmt($params['unit']) . ' mm', !empty($params['_fasit']));
 
         $this->pageOverview();
         $this->pageBuild();
@@ -231,11 +231,13 @@ final class Base10PdfGenerator extends WorksheetPdf
         $numbers = $this->tasks->buildNumbers(8);
         $build = [];
         foreach ($numbers as $n) {
-            $build[] = ['tokens' => [['text', 'Bygg tallet '], ['strong', (string) $n], ['text', '.'], ['br'], ['pv', '', $this->places]]];
+            $build[] = ['tokens' => [['text', 'Bygg tallet '], ['strong', (string) $n], ['text', '.'], ['br'], ['pv', '', $this->places]],
+                'answers' => [Base10Tasks::digits($n)]];
         }
         $words = [];
         foreach ($this->tasks->wordNumbers(4, $numbers) as $n) {
-            $words[] = ['tokens' => [['text', 'Bygg: '], ['strong', Base10Tasks::words($n)], ['text', '.   Tallet er '], ['line']]];
+            $words[] = ['tokens' => [['text', 'Bygg: '], ['strong', Base10Tasks::words($n)], ['text', '.   Tallet er '], ['line']],
+                'answer' => (string) $n];
         }
         $this->drawSections([
             ['title' => 'Bygg tallet', 'intro' => null, 'tasks' => $build],
@@ -287,6 +289,7 @@ final class Base10PdfGenerator extends WorksheetPdf
             $pdf->SetDrawColor(...self::INK2);
             $pdf->SetLineWidth(0.25);
             $pdf->LineExact($ax + 14, $base - $h / 2 + 2.2, $ax + $answerW, $base - $h / 2 + 2.2);
+            $this->answerOnLine($ax + 15, $base - $h / 2 + 1.4, $answerW - 15, (string) $task['answer'], 11);
             $y += $rowH;
             $pdf->SetDrawColor(...self::RULE);
             $pdf->SetLineWidth(0.2);
@@ -310,13 +313,16 @@ final class Base10PdfGenerator extends WorksheetPdf
         $list = [];
         foreach ($tasks as $t) {
             $tokens = $t['tokens'];
+            $task = ['tokens' => $tokens, 'answer' => $t['answer']];
             if (!empty($t['two_ways'])) {
-                $tokens[] = ['br'];
-                $tokens[] = ['pv', 'Måte 1:', $this->places ?: [10, 1]];
-                $tokens[] = ['br'];
-                $tokens[] = ['pv', 'Måte 2:', $this->places ?: [10, 1]];
+                $places = $this->places ?: [10, 1];
+                $task['tokens'][] = ['br'];
+                $task['tokens'][] = ['pv', 'Måte 1:', $places];
+                $task['tokens'][] = ['br'];
+                $task['tokens'][] = ['pv', 'Måte 2:', $places];
+                $task['answers'] = $this->twoWays($t['number'], $places);
             }
-            $list[] = ['tokens' => $tokens];
+            $list[] = $task;
         }
         $this->drawSections([['title' => 'Veksle og finn svaret', 'intro' => null, 'tasks' => $list]], $y);
         $this->footer();
@@ -591,10 +597,37 @@ final class Base10PdfGenerator extends WorksheetPdf
         $pdf->LineExact($x, $top + 2 * $cell, $x + $cols * $cell, $top + 2 * $cell);
     }
 
+    /**
+     * Fasit for «Vis tallet på to måter»: færrest mulig klosser, og så med én
+     * kloss vekslet til ti av typen under (bare plassene som vises på arket).
+     * @param list<int> $places
+     * @return list<array<int,int>>
+     */
+    private function twoWays(int $num, array $places): array
+    {
+        $first = Base10Tasks::digits($num);
+        $smallest = min($places);
+        foreach (array_reverse(array_values(array_filter($places, fn($v) => $v > $smallest))) as $v) {
+            // Veksle fra den minste plassen som har klosser og kan veksles nedover.
+            if ($first[$v] > 0 && in_array($v / 10, $places, true)) {
+                $second = $first;
+                $second[$v]--;
+                $second[$v / 10] += 10;
+                return [$first, $second];
+            }
+        }
+        return [$first];
+    }
+
     /* ======================================================= Egne tokens */
 
-    // ['strong', tekst]               uthevet tekst
-    // ['pv', etikett, [1000,100,…]]   svarruter per plassverdi med navn
+    // ['strong', tekst]                         uthevet tekst
+    // ['pv', etikett, [1000,100,…], svar]       svarruter per plassverdi med navn (svar: [plass => antall])
+
+    protected function answerSlot(string $type): ?int
+    {
+        return $type === 'pv' ? 3 : parent::answerSlot($type);
+    }
 
     protected function customLineHeight(array $types): ?float
     {
@@ -652,6 +685,9 @@ final class Base10PdfGenerator extends WorksheetPdf
             $pdf->SetFillHex($this->model->type($type)['color']['hex'], 0.85);
             $pdf->SetLineWidth(0.3);
             $pdf->RectExact($x, $yMid - 4, 9, 8, 'FD');
+            if (isset($t[3][$v])) {
+                $this->answerInBox($x, $yMid - 4, 9, 8, (string) $t[3][$v]);
+            }
             $x += 9 + 5;
         }
         return true;

@@ -97,7 +97,7 @@ final class MarbleModel implements ParametricModel
             }
         }
 
-        foreach (['unique', 'task_round', 'task_calc', 'no_negative', 'task_find', 'answer_key'] as $key) {
+        foreach (['unique', 'task_round', 'task_calc', 'no_negative', 'task_find'] as $key) {
             if (array_key_exists($key, $input)) {
                 $b = ParameterValidator::toBool($input[$key]);
                 $b === null ? $err($key, 'Ugyldig valg.') : $p[$key] = $b;
@@ -247,7 +247,7 @@ final class MarbleModel implements ParametricModel
     {
         return array_merge(array_keys($this->definition['parameters']), [
             'layout', 'content', 'unique', 'ops', 'expr_max', 'task_round', 'task_calc', 'calc_ops',
-            'no_negative', 'task_find', 'answer_key', 'seed',
+            'no_negative', 'task_find', 'seed',
         ]);
     }
 }

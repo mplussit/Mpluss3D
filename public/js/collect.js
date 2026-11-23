@@ -12,6 +12,7 @@
  * Oppsamlings-PDF-en tømmes når den er laget, slik som i M+.
  *
  * «Merk ark med» skriver en tekst langs høyre kant på hver side (som i M+).
+ * Sider med fasit står også som «… – fasit» i listen (ikke valgt fra start).
  */
 
 const PDF_LIB = 'pdf-lib';
@@ -87,10 +88,15 @@ export function initCollect(source) {
 
     function pages() {
         const list = [];
+        const fasit = [];
         source.documents().forEach((d, di) => {
-            for (let p = 0; p < d.numPages; p++) list.push({ doc: di, page: p, title: d.titles[p] || `Side ${p + 1}` });
+            for (let p = 0; p < d.numPages; p++) {
+                const title = d.titles[p] || `Side ${p + 1}`;
+                list.push({ doc: di, page: p, title });
+                if (d.fasitBytes && d.answers?.includes(p + 1)) fasit.push({ doc: di, page: p, title: `${title} – fasit`, fasit: true });
+            }
         });
-        return list;
+        return [...list, ...fasit];
     }
 
     function renderPages() {
@@ -102,7 +108,7 @@ export function initCollect(source) {
             box.innerHTML = `<p class="muted">${esc(error || (source.loading() ? 'Lager arkene …' : 'Denne siden har ingen PDF.'))}</p>`;
         } else {
             box.innerHTML = list.map((p, i) => `
-                <label class="check"><input type="checkbox" data-page="${i}" checked> ${esc(p.title)}</label>`).join('');
+                <label class="check${p.fasit ? ' pdf-fasit' : ''}"><input type="checkbox" data-page="${i}"${p.fasit ? '' : ' checked'}> ${esc(p.title)}</label>`).join('');
         }
         updatePageButtons();
     }
@@ -127,8 +133,9 @@ export function initCollect(source) {
         const docs = source.documents();
         const loaded = new Map();
         for (const p of sel) {
-            if (!loaded.has(p.doc)) loaded.set(p.doc, await PDFDocument.load(docs[p.doc].bytes));
-            const [page] = await out.copyPages(loaded.get(p.doc), [p.page]);
+            const key = `${p.doc}${p.fasit ? 'f' : ''}`;
+            if (!loaded.has(key)) loaded.set(key, await PDFDocument.load(p.fasit ? docs[p.doc].fasitBytes : docs[p.doc].bytes));
+            const [page] = await out.copyPages(loaded.get(key), [p.page]);
             out.addPage(page);
         }
         return { bytes: await out.save(), titles: sel.map((p) => p.title) };

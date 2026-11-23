@@ -11,7 +11,7 @@ declare(strict_types=1);
  *   POST api.php?action=generate[&model=…] (JSON)  lager STL-delene, svarer med token per del
  *   GET  api.php?action=stl&id=…[&download=1]      henter én STL (forhåndsvisning eller nedlasting)
  *   GET  api.php?action=zip&model=…&…              alle STL-delene + oversikt.txt i én ZIP
- *   GET  api.php?action=pdf[&model=…]&…            PDF fra de samme parameterne
+ *   GET  api.php?action=pdf[&model=…]&…            PDF fra de samme parameterne (&fasit=1: med svarene fylt inn)
  *   POST api.php?action=zip|pdf&model=… (JSON)     som over, med parameterne i JSON
  *                                                  (prosjekter som er for store for adressen)
  *   GET  api.php?action=describe[&model=…]&…       modellbeskrivelse (JSON) for M+
@@ -207,11 +207,19 @@ final class Api
     {
         $model = $this->model();
         $params = $this->requestParams($model);
+        // Fasit: de samme sidene, med svarene fylt inn på oppgavesidene.
+        $fasit = ($_GET['fasit'] ?? '') === '1';
+        $params['_fasit'] = $fasit;
         $pdf = $model->renderPdf($params);
         $name = $model->pdfFilename($params);
+        if ($fasit) {
+            $name = preg_replace('/\.pdf$/', '-fasit.pdf', $name);
+        }
         header('Content-Type: application/pdf');
         // Sidenavnene til fanene i forhåndsvisningen (JSON, URL-kodet).
         header('X-Page-Titles: ' . rawurlencode(json_encode(LabelPdf::lastPageTitles(), JSON_UNESCAPED_UNICODE)));
+        // Sidene som har fasit (1, 2, …), samme i begge utgavene.
+        header('X-Answer-Pages: ' . json_encode(LabelPdf::lastAnswerPages()));
         header('Cache-Control: no-store');
         header('Content-Length: ' . strlen($pdf));
         header('Content-Disposition: ' . (isset($_GET['download']) ? 'attachment' : 'inline') . '; filename="' . $name . '"');

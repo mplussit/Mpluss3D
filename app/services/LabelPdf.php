@@ -21,6 +21,25 @@ final class LabelPdf extends FPDF
     private array $pageTitles = [];
     /** @var list<string> Sidenavnene i den sist lagde PDF-en. */
     private static array $lastPageTitles = [];
+    /** @var array<int,true> Sider som har svar (fasit finnes). */
+    private array $answerPages = [];
+    /** @var list<int> Sidene med svar i den sist lagde PDF-en (1, 2, …). */
+    private static array $lastAnswerPages = [];
+
+    /**
+     * Merker gjeldende side som en oppgaveside med svar. Fasit-PDF-en har svarene
+     * fylt inn på akkurat disse sidene; forhåndsvisningen viser «Oppgave | Fasit» for dem.
+     */
+    public function MarkAnswerPage(): void
+    {
+        $this->answerPages[$this->PageNo()] = true;
+    }
+
+    /** Sidene med svar i den sist lagde PDF-en. @return list<int> */
+    public static function lastAnswerPages(): array
+    {
+        return self::$lastAnswerPages;
+    }
 
     /** Kort navn på gjeldende side, vises som fane i forhåndsvisningen. */
     public function SetPageTitle(string $title): void
@@ -41,6 +60,9 @@ final class LabelPdf extends FPDF
             $titles[] = $this->pageTitles[$i] ?? '';
         }
         self::$lastPageTitles = $titles;
+        $answers = array_keys($this->answerPages);
+        sort($answers);
+        self::$lastAnswerPages = $answers;
         return parent::Output($dest, $name, $isUTF8);
     }
 

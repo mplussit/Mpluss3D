@@ -15,6 +15,7 @@ declare(strict_types=1);
  *   level    lett | middels | vanskelig
  *   tokens   innholdet (se WorksheetPdf, pluss ['rod', n] og ['frac', p, q])
  *   answer   fasit som tekst
+ *   answers  fasit per svarfelt, når oppgaven har flere svarfelt (se WorksheetPdf::fillAnswers())
  *   rods     stavene som må ligge på bordet samtidig (brukes til kontroll)
  *   paper    true = settet har ikke stavene; tegneoppgave (merket)
  *
@@ -323,7 +324,8 @@ final class RodTasks
                 }
                 $out[] = self::task([['text', 'Lengden ' . $t . ' er like lang som ' . self::sum($ref) . '. Bygg lengden ' . $t . ' på to andre måter.'],
                     ['br'], ['text', 'Måte 1: '], ['line'], ['text', '   Måte 2: '], ['line']],
-                    self::sum($others[0]) . '; ' . self::sum($others[1]), [...$ref, ...$others[0]]);
+                    self::sum($others[0]) . '; ' . self::sum($others[1]), [...$ref, ...$others[0]],
+                    ['answers' => [self::sum($others[0]), self::sum($others[1])]]);
             }
             return $out;
         }
@@ -332,7 +334,8 @@ final class RodTasks
                 $two = $this->partitions($t, 2, 2);
                 if ($two) {
                     $out[] = self::task([['text', 'Bygg '], ['rod', $t], ['text', ' med to staver. Hvilke? '], ['line']],
-                        implode(' eller ', array_map([self::class, 'sum'], $two)), [$t, ...$two[0]]);
+                        implode(' eller ', array_map([self::class, 'sum'], $two)), [$t, ...$two[0]],
+                        ['answers' => [self::sum($two[0]) . (count($two) > 1 ? ' (eller ' . self::sum($two[1]) . (count($two) > 2 ? ' …' : '') . ')' : '')]]);
                 }
             } else {
                 $ways = $this->partitions($t);
@@ -340,7 +343,8 @@ final class RodTasks
                     $show = self::showcase($ways, 3);
                     $out[] = self::task([['text', 'Bygg '], ['rod', $t], ['text', ' på tre forskjellige måter. Skriv regnestykkene.'],
                         ['br'], ['text', 'Måte 1: '], ['line'], ['text', '  Måte 2: '], ['line'], ['text', '  Måte 3: '], ['line']],
-                        implode('; ', array_map([self::class, 'sum'], $show)), [$t, ...$show[0]]);
+                        implode('; ', array_map([self::class, 'sum'], $show)), [$t, ...$show[0]],
+                        ['answers' => array_map([self::class, 'sum'], $show)]);
                 }
             }
         }
@@ -375,7 +379,7 @@ final class RodTasks
                     $out[] = self::task([['rod', $a], ['text', ' + '], ['rod', $b], ['text', ' = '], ['box']], (string) $s, [$a, $b, $s]);
                 } elseif ($level === 'vanskelig' && $s > 10 && $a <= $b && $b < 10 && $this->canLay([$a, $b, 10, $s - 10])) {
                     $out[] = self::task([['rod', $a], ['text', ' + '], ['rod', $b], ['text', ' = '], ['rod', 10], ['text', ' + '], ['box'], ['text', ' = '], ['box']],
-                        ($s - 10) . ', ' . $s, [$a, $b, 10, $s - 10]);
+                        ($s - 10) . ', ' . $s, [$a, $b, 10, $s - 10], ['answers' => [(string) ($s - 10), (string) $s]]);
                 }
             }
         }
@@ -411,7 +415,8 @@ final class RodTasks
                         $d = $c - $a - $b;
                         if ($a >= $b && $d >= 1 && $this->canLay([$a, $b, $d, $c])) {
                             $out[] = self::task([['rod', $a], ['text', ' + '], ['rod', $b], ['text', ' + '], ['box'], ['text', ' = '], ['rod', $c],
-                                ['text', '   og   ' . $c . ' – ' . $a . ' – ' . $b . ' = '], ['box']], (string) $d, [$a, $b, $d, $c]);
+                                ['text', '   og   ' . $c . ' – ' . $a . ' – ' . $b . ' = '], ['box']], (string) $d, [$a, $b, $d, $c],
+                                ['answers' => [(string) $d, (string) $d]]);
                         }
                     }
                 }
@@ -439,7 +444,8 @@ final class RodTasks
                     $w = array_slice(array_reverse($ways), 0, 2);   // de største stavene først
                     $out[] = self::task([['text', 'Bygg lengden '], ['strong', (string) $p], ['text', ' med like staver på to måter.'],
                         ['br'], ['text', 'Gangestykker: '], ['line'], ['text', '  og  '], ['line']],
-                        implode(' og ', array_map(fn($x) => "{$x[0]} × {$x[1]}", $ways)), array_fill(0, $w[0][0], $w[0][1]));
+                        implode(' og ', array_map(fn($x) => "{$x[0]} × {$x[1]}", $ways)), array_fill(0, $w[0][0], $w[0][1]),
+                        ['answers' => array_map(fn($x) => "{$x[0]} × {$x[1]}", array_slice($ways, 0, 2))]);
                 }
             }
             return $out;
@@ -452,7 +458,7 @@ final class RodTasks
                     $check = $this->canLay([...$rods, $p]);
                     $out[] = self::task([['text', 'Legg ' . $k . ' '], ['rod', $a], ['text', ' etter hverandre. Hvor langt blir det? '], ['box'],
                         ...($check ? [['text', '  Kontroller med én stav.']] : [])],
-                        (string) $p . ($check ? ", stav $p" : ''), $check ? [...$rods, $p] : $rods);
+                        (string) $p . ($check ? ", stav $p" : ''), $check ? [...$rods, $p] : $rods, ['answers' => [(string) $p]]);
                 } elseif ($level === 'middels' && $p > 6 && $p <= 20) {
                     $out[] = self::task([['text', 'Vis '], ['strong', "$k × $a"], ['text', ' med staver. Hvor langt blir det? '], ['box']],
                         (string) $p, array_fill(0, $k, $a));
@@ -479,7 +485,8 @@ final class RodTasks
                     }
                 } elseif ($level === 'vanskelig' && $r > 0 && $q >= 2 && $this->canLay([...array_fill(0, $q, $a), $b, $r])) {
                     $out[] = self::task([['text', 'Hvor mange '], ['rod', $a], ['text', ' får plass langs '], ['rod', $b], ['text', '? '], ['box'],
-                        ['text', '  Rest: '], ['box']], "$q, rest $r", [...array_fill(0, $q, $a), $b, $r]);
+                        ['text', '  Rest: '], ['box']], "$q, rest $r", [...array_fill(0, $q, $a), $b, $r],
+                        ['answers' => [(string) $q, (string) $r]]);
                 }
             }
         }

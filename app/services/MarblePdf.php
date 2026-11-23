@@ -20,6 +20,9 @@ final class MarblePdf
         foreach ($pages as $page) {
             $pdf->AddPage($page['o'] ?? 'P');
             $pdf->SetPageTitle((string) ($page['label'] ?? ''));
+            if (!empty($page['answers'])) {
+                $pdf->MarkAnswerPage();
+            }
             foreach ($page['items'] as $it) {
                 $this->draw($pdf, $it);
             }

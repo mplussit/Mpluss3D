@@ -1788,6 +1788,74 @@ test('PDF: sidene, tegneoppgaver bare når settet mangler staver, arbeidsark i f
 });
 
 require __DIR__ . '/solids.php';
+
+echo "\nFasit\n";
+
+/** Tokens som er svarfelt (box, line, fracbox, pv). */
+$blankCount = fn(array $tokens): int => count(array_filter($tokens, fn($t) => in_array($t[0], ['box', 'line', 'fracbox', 'pv'], true)));
+
+test('fasit: samme sider og titler, svar bare i fasiten, «FASIT» på sidene med svar', function () use ($frac, $b10, $rods) {
+    $cases = [
+        'brøksirkler' => [$frac, $frac->validate([]), [2, 3]],
+        'brøksirkler (bare hele)' => [$frac, $frac->validate(['denominators' => [1]]), [2]],
+        'base 10'     => [$b10, $b10->validate([]), [2, 3, 4, 5]],
+        'tallstaver'  => [$rods, $rods->validate([]), [2, 3, 4, 5, 6]],
+    ];
+    foreach ($cases as $name => [$model, $p, $answerPages]) {
+        $plain = $model->renderPdf($p);
+        $plainTitles = LabelPdf::lastPageTitles();
+        eq($answerPages, LabelPdf::lastAnswerPages(), "$name: sider med svar");
+        $fasit = $model->renderPdf(['_fasit' => true] + $p);
+        eq($plainTitles, LabelPdf::lastPageTitles(), "$name: samme sider");
+        eq($answerPages, LabelPdf::lastAnswerPages(), "$name: samme sider med svar i fasiten");
+        $pc = pdfPages($plain);
+        $fc = pdfPages($fasit);
+        eq(count($pc), count($fc));
+        foreach ($fc as $i => $pg) {
+            $has = in_array($i + 1, $answerPages, true);
+            eq($has, str_contains($pg['c'], '(FASIT) Tj'), "$name side " . ($i + 1) . ': FASIT');
+            ok(!str_contains($pc[$i]['c'], '(FASIT) Tj'), "$name side " . ($i + 1) . ': ingen FASIT uten fasit');
+            // Svarfargen (rød) finnes bare i fasiten, og bare på sidene med svar.
+            ok(!str_contains($pc[$i]['c'], '0.784 0.118 0.118 rg'), "$name side " . ($i + 1) . ': rødt uten fasit');
+            eq($has, str_contains($pg['c'], '0.784 0.118 0.118 rg'), "$name side " . ($i + 1) . ': svar i rødt');
+            if (!$has) {
+                eq($pc[$i]['c'], $pg['c'], "$name side " . ($i + 1) . ': lik oppgavesiden');
+            }
+        }
+    }
+});
+
+test('fasit: alle svarfelt får et svar (tallstaver og brøksirkler)', function () use ($frac, $rods, $rodSets, $blankCount) {
+    $check = function (array $t, string $what) use ($blankCount) {
+        $n = $blankCount($t['tokens']);
+        $answer = (string) ($t['answer'] ?? '');
+        if ($n > 1) {
+            ok(isset($t['answers']) && count($t['answers']) === $n, "$what: $n svarfelt, men " . count($t['answers'] ?? []) . ' svar (' . $answer . ')');
+        }
+    };
+    foreach ($rodSets as $in) {
+        $tasks = new RodTasks($rods->validate($in)['counts']);
+        foreach (RodTasks::TYPES as $type) {
+            foreach (RodTasks::LEVELS as $level) {
+                foreach ($tasks->tasks($type, $level, 20) as $t) {
+                    $check($t, "staver $type/$level");
+                }
+            }
+        }
+    }
+    foreach ([[2, 3, 4, 6, 8], [2, 4], [3, 6, 12], [1, 2, 5, 10]] as $dens) {
+        $ft = new FractionTasks($frac, $dens);
+        foreach ($ft->compareSections() as $sec) {
+            foreach ($sec['tasks'] as $t) {
+                $check($t, 'brøk ' . json_encode($dens));
+            }
+        }
+        foreach ($ft->extraComparisons() as $t) {
+            $check($t, 'brøk ' . json_encode($dens));
+        }
+    }
+});
+
 require __DIR__ . '/lego.php';
 require __DIR__ . '/marble.php';
 

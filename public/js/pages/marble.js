@@ -18,7 +18,7 @@ import { initSheets } from '../sheets.js';
 const MODEL = 'marble';
 const DEBOUNCE_MS = 300;
 const NUMBER_KEYS = ['num_min', 'num_max', 'value_min', 'value_max', 'balls', 'calc_count', 'calc_terms', 'find_count', 'variants'];
-const BOOL_KEYS = ['unique', 'task_round', 'task_calc', 'no_negative', 'task_find', 'answer_key'];
+const BOOL_KEYS = ['unique', 'task_round', 'task_calc', 'no_negative', 'task_find'];
 const OP_LABELS = { '+': '+', '-': '–', '*': '×', '/': ':' };
 
 const state = {

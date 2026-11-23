@@ -1139,6 +1139,12 @@ p { margin: 0; }
 .sheet-stage { border-radius: var(--radius-paper); }
 .app-fixed .sheet-stage { height: auto; }
 
+/* «Oppgave | Fasit» over forhåndsvisningen av sider som har fasit. */
+.sheet-pane > .sheet-variant { align-self: center; margin: 0 0 8px; }
+.sheet-pane > .sheet-variant[hidden] { display: none; }
+.sheet-variant label:has(input[value="fasit"]:checked) { background: #c81e1e; border-color: #c81e1e; }
+.pdf-dialog .pdf-fasit { color: #a31919; }
+
 /* ------------------------------------------------------------ PDF-knapp og PDF-dialog (oppsamlings-PDF) */
 .pdf-btn { margin-left: auto; cursor: pointer; }
 .app-fixed .pdf-btn { margin-left: auto; }

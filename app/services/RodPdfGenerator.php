@@ -37,7 +37,7 @@ final class RodPdfGenerator extends WorksheetPdf
         $this->p = $params;
         $this->tasks = new RodTasks($params['counts']);
         $this->colors = $this->model->colors($params);
-        $this->newDocument('Tallstaver – ' . RodModel::fmt($params['unit']) . ' mm');
+        $this->newDocument('Tallstaver – ' . RodModel::fmt($params['unit']) . ' mm', !empty($params['_fasit']));
 
         $this->pageGuide();
         $this->pageBuild();
@@ -482,6 +482,12 @@ final class RodPdfGenerator extends WorksheetPdf
     // ['frac', p, q]      stablet brøk
     // ['fracbox']         tom brøk (to ruter)
 
+    /** ['fracbox', svar]: tom brøk der både teller og nevner skal fylles inn (svaret er «p/q»). */
+    protected function answerSlot(string $type): ?int
+    {
+        return $type === 'fracbox' ? 1 : parent::answerSlot($type);
+    }
+
     protected function customLineHeight(array $types): ?float
     {
         if (array_intersect($types, ['frac', 'fracbox'])) {
@@ -525,6 +531,11 @@ final class RodPdfGenerator extends WorksheetPdf
                 $pdf->RectExact($x + 1.5, $yMid - 5.2, 6, 4.4, 'D');
                 $pdf->RectExact($x + 1.5, $yMid + 0.8, 6, 4.4, 'D');
                 $pdf->LineExact($x + 0.8, $yMid, $x + 8.2, $yMid);
+                if (isset($t[1]) && str_contains((string) $t[1], '/')) {
+                    [$num, $den] = explode('/', (string) $t[1], 2);
+                    $this->answerInBox($x + 1.5, $yMid - 5.2, 6, 4.4, $num, 8);
+                    $this->answerInBox($x + 1.5, $yMid + 0.8, 6, 4.4, $den, 8);
+                }
                 return true;
         }
         return false;

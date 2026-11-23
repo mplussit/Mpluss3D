@@ -26,6 +26,10 @@ declare(strict_types=1);
  * (public/js/sheet-svg.js) tegner nøyaktig disse elementene, så de kan
  * ikke bli forskjellige. Tekstbredder måles med FPDFs Helvetica-metrikk.
  *
+ * Fasit (p['_fasit']): de samme sidene, men med svarene fylt inn (rødt) på
+ * oppgavearket: verdiene og svaret i «Regn med verdiene» og en løsning i
+ * «Finn hullene» (flere løsninger står under). Sider med svar har 'answers' => true.
+ *
  * Alt er deterministisk: samme parametere og samme frø (seed) gir samme ark.
  */
 final class MarbleSheets
@@ -52,6 +56,7 @@ final class MarbleSheets
     private const RULE = '#d9d2c4';
     private const SOFT = '#f3efe7';
     private const HOLE_FILL = '#fff3e6';
+    private const ANSWER = '#c81e1e';
     private const PT = 25.4 / 72;           // mm per punkt
 
     /** Gjeldende side: alle sidene er liggende (som i M+ matematikk). */
@@ -61,10 +66,15 @@ final class MarbleSheets
     private LabelPdf $metrics;
     private array $pages = [];
     private array $warnings = [];
+    /** Fasitutgaven: svarene fylles inn. */
+    private bool $fasit;
+    /** Siden som lages nå, har svar. */
+    private bool $pageAnswers = false;
 
     public function __construct(private array $def, private array $p)
     {
         $this->metrics = new LabelPdf();
+        $this->fasit = !empty($p['_fasit']);
     }
 
     /* ================================================================ Innhold */
@@ -283,9 +293,6 @@ final class MarbleSheets
                 $this->taskSheet($v, $num);
             }
         }
-        if ($this->p['answer_key']) {
-            $this->answerKey($variants);
-        }
         $total = count($this->pages);
         foreach ($this->pages as $i => &$page) {
             $page['items'][] = $this->text($page['w'] - self::M, $page['h'] - 6.5, 'Side ' . ($i + 1) . " av $total", 2.3, false, '#828282', 'R');
@@ -297,11 +304,18 @@ final class MarbleSheets
     private function addPage(string $kind, string $label, ?int $variant, array $items): void
     {
         $items[] = $this->text(self::M, $this->ph - 6.5, $this->footerText(), 2.3, false, '#828282');
+        if ($this->fasit && $this->pageAnswers) {
+            // «FASIT» øverst til høyre (til venstre for «Sett n» hvis den står der).
+            $x = $this->pw - self::M - ($variant ? $this->tw("Sett $variant", 2.82, true) + 5 : 0);
+            $items[] = $this->text($x, 13, 'FASIT', 2.82, true, self::ANSWER, 'R');
+        }
         $this->pages[] = [
             'kind' => $kind, 'label' => $label, 'variant' => $variant,
             'o' => $this->pw > $this->ph ? 'L' : 'P', 'w' => $this->pw, 'h' => $this->ph,
+            'answers' => $this->pageAnswers,
             'items' => $items,
         ];
+        $this->pageAnswers = false;
     }
 
     /** Liggende A4 (alle sidene); $landscape = false gir stående mål. */
@@ -557,7 +571,7 @@ final class MarbleSheets
                 foreach ($row as $ci => $f) {
                     $i = $ri * $cols + $ci;
                     $x = $x0 + $ci * (($cw) / $cols);
-                    array_push($items, ...$this->findItem($x, $y, chr(97 + $i) . ')', $f['target']));
+                    array_push($items, ...$this->findItem($x, $y, chr(97 + $i) . ')', $f, $v['holes'], $cw / $cols));
                 }
                 $y += 14;
             }
@@ -656,138 +670,70 @@ final class MarbleSheets
                 $items[] = $this->text($tc, $mid + 0.359 * 6, $holes[$h]['label'], 6, true, self::INK, 'C');
             }
             $items[] = ['k' => 'rect', 'x' => $tc - 5.5, 'y' => $mid + 5, 'w' => 11, 'h' => 8, 's' => self::INK2, 'lw' => 0.25];
+            array_push($items, ...$this->answer($tc, $mid + 9, (string) $holes[$h]['value'], 4.2, 10));
             $cx += self::TERM_W;
             $sign = $i < count($c['ops']) ? self::opSign($c['ops'][$i]) : '=';
             $items[] = $this->text($cx + self::OP_W / 2, $mid + 0.359 * 5, $sign, 5, true, self::INK, 'C');
             $cx += self::OP_W;
         }
         $items[] = ['k' => 'rect', 'x' => $cx + 1, 'y' => $mid - 4.5, 'w' => 16, 'h' => 9, 's' => self::INK, 'lw' => 0.35];
+        array_push($items, ...$this->answer($cx + 9, $mid, (string) $c['answer'], 5, 15));
         return $items;
     }
 
-    /** a)  [  ] + [  ] = 13 */
-    private function findItem(float $x, float $y, string $tag, int $target): array
+    /**
+     * Et svar sentrert om (cx, midt) – bare i fasiten, men siden merkes alltid.
+     * Skriften krympes så svaret får plass i bredden $w.
+     */
+    private function answer(float $cx, float $mid, string $s, float $size, float $w): array
     {
+        $this->pageAnswers = true;
+        if (!$this->fasit) {
+            return [];
+        }
+        $size = min($size, $size * $w / max(0.1, $this->tw($s, $size, true)));
+        return [$this->text($cx, $mid + 0.359 * $size, $s, $size, true, self::ANSWER, 'C')];
+    }
+
+    /** a)  [  ] + [  ] = 13. I fasiten står én løsning i rutene og de andre under. */
+    private function findItem(float $x, float $y, string $tag, array $f, array $holes, float $w): array
+    {
+        $target = $f['target'];
         $items = [$this->text($x, $y + 1.5, $tag, 3.5, true, self::INK2)];
         $cx = $x + 7;
+        $first = $f['solutions'][0] ?? [];
         for ($i = 0; $i < $this->p['find_size']; $i++) {
             $items[] = ['k' => 'rect', 'x' => $cx, 'y' => $y - 4.5, 'w' => 13, 'h' => 9, 's' => self::INK, 'lw' => 0.35];
+            if (isset($first[$i])) {
+                $hole = $holes[$first[$i]];
+                if (isset($hole['symbol'])) {
+                    $this->pageAnswers = true;
+                    if ($this->fasit) {
+                        array_push($items, ...$this->symbol($hole['symbol'], $cx + 6.5, $y, 3.4));
+                    }
+                } else {
+                    array_push($items, ...$this->answer($cx + 6.5, $y, $this->holeName($hole), 5, 12));
+                }
+            }
             $cx += 13;
             $sign = $i < $this->p['find_size'] - 1 ? '+' : '=';
             $items[] = $this->text($cx + 3.5, $y + 0.359 * 5, $sign, 5, true, self::INK, 'C');
             $cx += 7;
         }
         $items[] = $this->text($cx + 1, $y + 0.359 * 5.5, (string) $target, 5.5, true, self::INK);
+        if ($this->fasit && count($f['solutions']) > 1) {
+            $more = array_map(fn($sol) => implode(' + ', array_map(fn($h) => $this->holeName($holes[$h]), $sol)), array_slice($f['solutions'], 1));
+            $line = $this->wrap('Også: ' . implode(',  ', $more), 2.4, $w - 8)[0];
+            $items[] = $this->text($x + 7, $y + 7.6, $line, 2.4, false, self::ANSWER);
+        }
         return $items;
     }
 
     /* ---------------------------------------------------------------- Fasit */
 
-    private function answerKey(array $variants): void
-    {
-        $this->orient(true);
-        [$items, $y] = $this->header('Fasit', null, 'For læreren. Verdiene i hullene, svarene på stykkene og alle løsningene på «Finn hullene».');
-        // To spalter på den liggende siden, som oppgavearket.
-        $gap = 12.0;
-        $cw = ($this->pw - 2 * self::M - $gap) / 2;
-        $x0 = self::M;
-        $top = $y;
-        $flush = function (float $need) use (&$items, &$y, &$x0, &$top, $cw, $gap) {
-            if ($y + $need <= $this->bottom()) {
-                return;
-            }
-            if ($x0 === self::M) {
-                $x0 = self::M + $cw + $gap;
-                $y = $top;
-                return;
-            }
-            $this->addPage('key', 'Fasit', null, $items);
-            [$items, $y] = $this->header('Fasit (fortsatt)', null, '');
-            $x0 = self::M;
-            $top = $y;
-        };
-        $W = $cw;
-        foreach ($variants as $v) {
-            $flush(30);
-            if (count($variants) > 1) {
-                $items[] = $this->text($x0, $y, 'Sett ' . $v['number'], 4.2, true, self::ACCENT);
-                $y += 6.5;
-            }
-            // Hullene i tre kolonner, slik de står på arket.
-            $items[] = $this->text($x0, $y, 'Hullene', 3.5, true, self::INK);
-            $y += 5.5;
-            foreach (array_chunk($v['holes'], 3) as $row) {
-                $flush(6);
-                foreach ($row as $ci => $h) {
-                    array_push($items, ...$this->keyHole($x0 + $ci * ($W / 3), $y, $h));
-                }
-                $y += 6;
-            }
-            $y += 2;
-            if ($v['calc']) {
-                $flush(12);
-                $items[] = $this->text($x0, $y, 'Regn med verdiene', 3.5, true, self::INK);
-                $y += 5.5;
-                $texts = array_map(fn($c, $i) => chr(97 + $i) . ')  ' . $this->calcAnswerText($c, $v['holes']), $v['calc'], array_keys($v['calc']));
-                $widest = max(array_map(fn($t) => $this->tw($t, 3.3), $texts));
-                $cols = 2 * $widest + 4 <= $W ? 2 : 1;
-                foreach (array_chunk($texts, $cols) as $row) {
-                    $flush(6);
-                    foreach ($row as $ci => $s) {
-                        $items[] = $this->text($x0 + $ci * ($W / 2), $y, $s, 3.3, false, self::INK);
-                    }
-                    $y += 5.5;
-                }
-                $y += 2;
-            }
-            if ($v['find']) {
-                $flush(12);
-                $items[] = $this->text($x0, $y, 'Finn hullene (alle løsninger)', 3.5, true, self::INK);
-                $y += 5.5;
-                foreach ($v['find'] as $i => $f) {
-                    $sols = array_map(fn($sol) => implode(' + ', array_map(fn($h) => $this->holeName($v['holes'][$h]), $sol)), $f['solutions']);
-                    $lines = $this->wrap(chr(97 + $i) . ')  ' . $f['target'] . ':  ' . implode('   eller   ', $sols), 3.3, $W);
-                    foreach ($lines as $li => $line) {
-                        $flush(5.5);
-                        $items[] = $this->text($x0 + ($li ? 6 : 0), $y, $line, 3.3, false, self::INK);
-                        $y += 5;
-                    }
-                }
-            }
-            $y += 6;
-        }
-        $this->addPage('key', 'Fasit', null, $items);
-    }
-
-    private function keyHole(float $x, float $y, array $h): array
-    {
-        if (isset($h['symbol'])) {
-            return [...$this->symbol($h['symbol'], $x + 2.4, $y - 1.2, 2.4),
-                $this->text($x + 6.5, $y, $h['label'] . ' = ' . $h['value'], 3.3, false, self::INK)];
-        }
-        $s = match ($this->p['content']) {
-            'numbers'     => $h['label'],
-            'expressions' => $h['label'] . ' = ' . $h['value'],
-            default       => $h['label'] . ' = ' . $h['value'],
-        };
-        return [$this->text($x, $y, $s, 3.3, false, self::INK)];
-    }
-
     private function holeName(array $h): string
     {
         return $this->p['content'] === 'expressions' ? (string) $h['value'] : $h['label'];
-    }
-
-    private function calcAnswerText(array $c, array $holes): string
-    {
-        $names = '';
-        $vals = '';
-        foreach ($c['terms'] as $i => $h) {
-            $sep = $i ? ' ' . self::opSign($c['ops'][$i - 1]) . ' ' : '';
-            $names .= $sep . $holes[$h]['label'];
-            $vals .= $sep . $holes[$h]['value'];
-        }
-        return "$names = $vals = {$c['answer']}";
     }
 
     /* ------------------------------------------------------------- Felles */

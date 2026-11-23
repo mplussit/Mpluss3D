@@ -125,7 +125,6 @@ return [
         'calc_ops'       => ['+', '-'],
         'no_negative'    => true,
         'task_find'      => true,
-        'answer_key'     => true,
         'seed'           => 1,
     ],
 ];
