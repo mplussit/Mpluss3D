@@ -65,22 +65,14 @@
 
         <h2 class="panel-heading">Dette skal skrives ut</h2>
         <table class="print-list" id="print-list">
-            <thead><tr><th scope="col">Brøk</th><th scope="col">Antall</th><th scope="col"><span class="visually-hidden">Last ned</span></th></tr></thead>
+            <thead><tr><th scope="col">Brøk</th><th scope="col">Antall</th></tr></thead>
             <tbody></tbody>
-            <tfoot><tr><th scope="row">Totalt</th><td id="print-total" class="num" colspan="2"></td></tr></tfoot>
+            <tfoot><tr><th scope="row">Totalt</th><td id="print-total" class="num"></td></tr></tfoot>
         </table>
         <p class="hint panel-hint">Fargene finnes bare i forhåndsvisningen. Skriv gjerne ut hvert brøksett
             i filament med tilsvarende farge, så blir settene lette å skille fra hverandre.</p>
 
         <div id="message" class="message" role="alert" hidden></div>
 
-        <div class="downloads">
-            <button type="button" id="download-all" class="btn btn-primary" disabled>
-                <span class="btn-title">Last ned alle STL-filene</span><span class="btn-sub" id="all-sub">Én STL-fil per brøk</span>
-            </button>
-            <button type="button" id="download-pdf" class="btn btn-secondary" disabled>
-                <span class="btn-title">Last ned PDF</span><span class="btn-sub">Oversikt, oppgaver og arbeidsflate</span>
-            </button>
-        </div>
     </aside>
 </main>

@@ -122,19 +122,17 @@
 
         <hr class="rule">
 
-        <h2 class="panel-heading">4 · Nedlasting</h2>
+        <h2 class="panel-heading">4 · Byggeplate</h2>
         <div id="message" class="message" role="alert" hidden></div>
         <div class="downloads">
-            <button type="button" id="download-stl" class="btn btn-primary" disabled>
-                <span class="btn-title">Last ned STL for valgt ramme</span><span class="btn-sub" id="stl-sub">Én ramme</span>
+            <button type="button" id="plate-add-frame" class="btn btn-primary" disabled>
+                <span class="btn-title">Legg valgt ramme på byggeplaten</span><span class="btn-sub" id="plate-frame-sub">Ramme 1</span>
             </button>
-            <button type="button" id="download-all" class="btn btn-secondary" disabled>
-                <span class="btn-title">Last ned alle STL-filene</span><span class="btn-sub" id="all-sub">Én STL-fil per ramme</span>
-            </button>
-            <button type="button" id="download-pdf" class="btn btn-secondary" disabled>
-                <span class="btn-title">Last ned PDF</span><span class="btn-sub" id="pdf-sub">Oversikt og etiketter i faktisk størrelse</span>
+            <button type="button" id="plate-add-frames" class="btn btn-secondary" disabled>
+                <span class="btn-title">Legg alle rammene på byggeplaten</span><span class="btn-sub" id="plate-frames-sub">Én av hver ramme</span>
             </button>
         </div>
+        <p class="hint" id="plate-feedback" role="status">Byggeplaten åpnes med 3MF-knappen øverst, og lagres der som 3MF-fil.</p>
         <p class="hint panel-hint">LEGO® er et varemerke for LEGO-gruppen, som ikke står bak eller godkjenner M+ 3D.</p>
     </aside>
 </main>

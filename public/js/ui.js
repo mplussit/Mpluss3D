@@ -1,6 +1,6 @@
 /**
  * Felles hjelpefunksjoner for modellsidene i M+ 3D: skjemakontroller,
- * statuslinje, meldinger, feil ved feltene, nedlasting og hjelpedialog.
+ * statuslinje, meldinger, feil ved feltene og hjelpedialog.
  */
 
 export const API = 'api.php';
@@ -68,58 +68,6 @@ export function hideMessage() {
 /** Grønn hake + tekst (gyldig modell). */
 export const CHECK_ICON = '<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5l3.2 3L13 4.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
-export const DOWNLOAD_ICON = '<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2v8M4.5 6.8L8 10.3l3.5-3.5M3 13.5h10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-
-/**
- * Henter en fil og lagrer den med gitt navn. Feil fra API-et (JSON) vises
- * som melding og ved feltene. Knappen er deaktivert mens filen hentes;
- * afterwards() kalles til slutt (for å sette knappene riktig igjen). Med body
- * sendes parameterne som JSON (POST).
- */
-export async function downloadFrom(url, filename, button, afterwards, body = null) {
-    if (button) button.disabled = true;
-    try {
-        const res = body
-            ? await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
-            : await fetch(url);
-        const type = res.headers.get('Content-Type') || '';
-        if (!res.ok || type.includes('application/json')) {
-            const data = await res.json().catch(() => ({}));
-            if (data.errors) data.errors.forEach((e) => setFieldError(e.field, e.message));
-            showMessage(data.error || 'Nedlastingen mislyktes.');
-            return;
-        }
-        const blob = await res.blob();
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        setTimeout(() => URL.revokeObjectURL(a.href), 10000);
-    } catch {
-        showMessage('Nedlastingen mislyktes. Sjekk nettforbindelsen og prøv igjen.');
-    } finally {
-        afterwards?.();
-    }
-}
-
-/**
- * Laster ned alle STL-filene, én vanlig .stl-fil per del (ingen ZIP).
- * Nettleseren kan spørre én gang om siden får laste ned flere filer.
- */
-export async function downloadAll(parts, button, afterwards) {
-    if (button) button.disabled = true;
-    try {
-        for (const p of parts) {
-            await downloadFrom(`${p.stl_url}&download=1`, p.filename, null, null);
-            await new Promise((r) => setTimeout(r, 400));   // litt pause, så nettleseren tar alle
-        }
-    } finally {
-        afterwards?.();
-    }
-}
-
 /** Hjelpedialogen («Hva er STL og PDF?»). */
 export function bindHelpDialog() {
     const dialog = $('#help-dialog');
@@ -142,7 +90,7 @@ export function bindViewButtons(viewer) {
 }
 
 export function webglMissing(container) {
-    container.innerHTML = '<p class="muted" style="padding:20px">3D-visning er ikke tilgjengelig i denne nettleseren (WebGL mangler). Du kan fortsatt laste ned filene.</p>';
+    container.innerHTML = '<p class="muted" style="padding:20px">3D-visning er ikke tilgjengelig i denne nettleseren (WebGL mangler). Du kan fortsatt lage 3MF- og PDF-filer med knappene øverst.</p>';
 }
 
 export function fmt(n) {

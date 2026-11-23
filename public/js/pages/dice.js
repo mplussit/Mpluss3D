@@ -8,7 +8,7 @@
 import { DiceViewer } from '../viewer.js';
 import {
     API, $, fieldControl, setStatus, clearAllErrors, showMessage, hideMessage,
-    downloadFrom, bindHelpDialog, bindViewButtons, webglMissing, fmt, escapeHtml, CHECK_ICON,
+    bindHelpDialog, bindViewButtons, webglMissing, fmt, escapeHtml, CHECK_ICON,
     setFieldError as setError, clearFieldError,
 } from '../ui.js';
 import { initSheets } from '../sheets.js';
@@ -125,8 +125,6 @@ function bindEvents() {
     });
     $('#show-names').addEventListener('change', (e) => viewer?.setShowNames(e.target.checked));
     bindViewButtons(viewer);
-    $('#download-stl').addEventListener('click', downloadStl);
-    $('#download-pdf').addEventListener('click', downloadPdf);
 }
 
 /* ------------------------------------------------------------- Generering */
@@ -228,20 +226,6 @@ function renderSheetPreview() {
     }).join('');
 }
 
-/* ------------------------------------------------------------- Nedlasting */
-
-async function downloadStl() {
-    if (!state.current) return;
-    await downloadFrom(`${state.current.stl_url}&download=1`, state.current.filename, $('#download-stl'), updateButtons);
-}
-
-async function downloadPdf() {
-    if (!state.current) return;
-    const q = pdfQuery();
-    const name = state.current.filename.replace(/\.stl$/, '-dekor.pdf');
-    await downloadFrom(`${API}?${q}`, name, $('#download-pdf'), updateButtons);
-}
-
 /* ------------------------------------------------------------ Hjelpefunksjoner */
 
 function pdfQuery() {
@@ -257,8 +241,6 @@ function labelValue() {
 
 function updateButtons() {
     const ready = state.valid && !state.generating && !!state.current;
-    $('#download-stl').disabled = !ready;
-    $('#download-pdf').disabled = !ready;
     sheets.refresh();
 }
 

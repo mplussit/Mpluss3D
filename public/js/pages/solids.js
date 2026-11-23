@@ -11,7 +11,7 @@ import { SolidViewer } from '../solids-viewer.js';
 import { netSvg } from '../net-svg.js';
 import {
     API, $, fieldControl, setStatus, setFieldError, clearAllErrors,
-    showMessage, hideMessage, downloadFrom, bindHelpDialog, bindViewButtons, webglMissing,
+    showMessage, hideMessage, bindHelpDialog, bindViewButtons, webglMissing,
     fmt, escapeHtml, CHECK_ICON,
 } from '../ui.js';
 import { initSheets } from '../sheets.js';
@@ -145,14 +145,6 @@ function bindEvents() {
         setActiveView(null);
     });
 
-    $('#download-stl').addEventListener('click', () => {
-        const part = state.current?.parts[0];
-        if (part) downloadFrom(`${part.stl_url}&download=1`, part.filename, $('#download-stl'), updateButtons);
-    });
-    $('#download-net').addEventListener('click', () =>
-        downloadFrom(`${API}?${query('pdf', 'net')}`, pdfName('nett'), $('#download-net'), updateButtons));
-    $('#download-tasks').addEventListener('click', () =>
-        downloadFrom(`${API}?${query('pdf', 'tasks')}`, pdfName(`oppgaver-niva${state.level}`), $('#download-tasks'), updateButtons));
 }
 
 /* ------------------------------------------------------------- Generering */
@@ -168,11 +160,6 @@ function query(action, documentType) {
     const q = new URLSearchParams({ action, model: MODEL, download: '1', document: documentType });
     for (const [k, v] of Object.entries(requestBody())) q.set(k, typeof v === 'boolean' ? (v ? '1' : '0') : String(v));
     return q;
-}
-
-function pdfName(suffix) {
-    const stl = state.current?.parts[0]?.filename ?? 'romfigur.stl';
-    return stl.replace(/(-hul)?\.stl$/, `-${suffix}.pdf`);
 }
 
 function scheduleGenerate(delay = DEBOUNCE_MS) {
@@ -257,7 +244,6 @@ function updateInfo(data) {
         `<span class="num">${escapeHtml(i.name)}</span> · <span class="num">${i.size_mm.map(fmt).join(' × ')} mm</span> · `
         + (i.hollow ? `hul, ${fmt(i.wall)} mm vegg` : 'massiv') + ' · '
         + (part.check.ok ? `<span class="valid">${CHECK_ICON}lukket og målriktig</span>` : '<span class="invalid">kontrollen feilet</span>');
-    $('#stl-sub').textContent = `${part.filename} · ca. ${fmt(Math.round(m.material_g.print_g))} g PLA`;
     $('#hollow-hint').textContent = i.hollow
         ? (i.roof
             ? 'Hulrommet er lukket. Taket i hulrommet skrår 45°, så figuren kan skrives ut uten støtte. Veggen blir derfor tykkere øverst.'
@@ -302,22 +288,17 @@ function renderNetStatus(m) {
     if (L.mode === 'single') {
         el.className = 'net-status ok';
         el.textContent = `Får plass på ett A4-ark (${L.orientation === 'L' ? 'liggende' : 'stående'}) i målestokk 1:1. Nettet er ${size} (${m.net.variant}).`;
-        $('#net-sub').textContent = 'Utbrettingsfigur i målestokk 1:1, ett ark';
     } else if (L.mode === 'tiles') {
         el.className = 'net-status warn';
         el.textContent = `Nettet er ${size} og får ikke plass på ett A4-ark i 1:1. Velg hvordan det skal skrives ut:`;
-        $('#net-sub').textContent = `Målestokk 1:1 på ${L.pages.length} ark + oversikt`;
     } else {
         el.className = 'net-status warn';
         el.textContent = `Nettet er ${size} og får ikke plass på ett A4-ark i 1:1. Det er forminsket til ${L.scale_label}:`;
-        $('#net-sub').textContent = `Skalert ${L.scale_label} på ett ark (ikke 1:1)`;
     }
 }
 
 function updateButtons() {
     const ready = state.valid && !state.generating && !!state.current;
-    for (const id of ['#download-stl', '#download-net', '#download-tasks']) $(id).disabled = !ready;
-    $('#tasks-sub').textContent = `${state.schema?.choices.level.options[state.level] ?? ''} · fem sider og fasit`;
     sheets.refresh();
 }
 

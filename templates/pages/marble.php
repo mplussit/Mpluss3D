@@ -131,19 +131,5 @@
 
         <div id="message" class="message" role="alert" hidden></div>
 
-        <hr class="rule">
-
-        <h2 class="panel-heading">5 · Nedlasting</h2>
-        <div class="downloads">
-            <button type="button" id="download-pdf" class="btn btn-primary" disabled>
-                <span class="btn-title">Last ned PDF med arkene</span><span class="btn-sub" id="pdf-sub">Alle sidene i forhåndsvisningen</span>
-            </button>
-            <button type="button" id="download-board" class="btn btn-secondary">
-                <span class="btn-title" id="board-title">Last ned STL: kulespill A</span><span class="btn-sub" id="board-sub">160 × 250 × 18 mm</span>
-            </button>
-            <button type="button" id="download-base" class="btn btn-secondary">
-                <span class="btn-title">Last ned STL: bunnen</span><span class="btn-sub" id="base-sub">166 × 256 × 5 mm, lomme til arket</span>
-            </button>
-        </div>
     </aside>
 </main>

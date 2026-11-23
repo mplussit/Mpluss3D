@@ -50,13 +50,5 @@
 
         <div id="message" class="message" role="alert" hidden></div>
 
-        <div class="downloads">
-            <button type="button" id="download-stl" class="btn btn-primary" disabled>
-                <span class="btn-title">Last ned STL</span><span class="btn-sub">3D-modell til printeren</span>
-            </button>
-            <button type="button" id="download-pdf" class="btn btn-secondary" disabled>
-                <span class="btn-title">Last ned PDF-dekor</span><span class="btn-sub">Etiketter til terningen</span>
-            </button>
-        </div>
     </aside>
 </main>

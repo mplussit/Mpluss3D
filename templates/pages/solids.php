@@ -76,17 +76,6 @@
 
         <div id="message" class="message" role="alert" hidden></div>
 
-        <div class="downloads">
-            <button type="button" id="download-stl" class="btn btn-primary" disabled>
-                <span class="btn-title">Last ned STL</span><span class="btn-sub" id="stl-sub">3D-modellen til printeren</span>
-            </button>
-            <button type="button" id="download-net" class="btn btn-secondary" disabled>
-                <span class="btn-title">Last ned PDF-nett</span><span class="btn-sub" id="net-sub">Utbrettingsfigur i målestokk 1:1</span>
-            </button>
-            <button type="button" id="download-tasks" class="btn btn-secondary" disabled>
-                <span class="btn-title">Last ned PDF-oppgaver</span><span class="btn-sub" id="tasks-sub">Fem sider med oppgaver og fasit</span>
-            </button>
-        </div>
 
         <hr class="rule">
 

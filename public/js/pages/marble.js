@@ -11,7 +11,7 @@
 import { MarbleViewer } from '../marble-viewer.js';
 import {
     API, $, setStatus, setFieldError, clearAllErrors, showMessage, hideMessage,
-    downloadFrom, bindHelpDialog, bindViewButtons, escapeHtml,
+    bindHelpDialog, bindViewButtons, escapeHtml,
 } from '../ui.js';
 import { initSheets } from '../sheets.js';
 
@@ -84,8 +84,6 @@ function buildControls() {
         `<label><input type="radio" name="expr_max" value="${m}"> ${m}</label>`).join('');
     $('#calc-ops').innerHTML = ['+', '-'].map((op) =>
         `<label title="${op === '+' ? 'Pluss' : 'Minus'}"><input type="checkbox" name="calc_ops" value="${op}"> <span class="op-sign">${OP_LABELS[op]}</span></label>`).join('');
-    const b = s.files;
-    $('#base-sub').textContent = `${b.base.filename} · ${b.base.size}, lomme til arket`;
 }
 
 /** Setter kontrollene fra state.values og viser bare det som gjelder. */
@@ -94,8 +92,6 @@ function syncControls() {
     const layout = state.schema.layouts[v.layout];
     document.querySelector(`#layout-options input[value="${v.layout}"]`).checked = true;
     $('#layout-help').textContent = `Kulespill ${v.layout}: ${layout.holes} hull og ${layout.pins} pinner. Arkene merkes med ${v.layout}.`;
-    $('#board-title').textContent = `Last ned STL: kulespill ${v.layout}`;
-    $('#board-sub').textContent = `${layout.file.filename} · ${state.schema.files.board.size}`;
     document.querySelector(`#content-options input[value="${v.content}"]`).checked = true;
     for (const k of NUMBER_KEYS) {
         const el = $(`#f-${k}`);
@@ -156,16 +152,6 @@ function bindEvents() {
 
     $('#lift-board').addEventListener('change', (e) => viewer?.setLifted(e.target.checked));
 
-    $('#download-pdf').addEventListener('click', () =>
-        downloadFrom(`${API}?action=pdf&model=${MODEL}&download=1`, pdfName(), $('#download-pdf'), updateButtons, requestBody()));
-    $('#download-board').addEventListener('click', () => {
-        const f = boardFile();
-        downloadFrom(f.path, f.filename, $('#download-board'), () => ($('#download-board').disabled = false));
-    });
-    $('#download-base').addEventListener('click', () => {
-        const f = state.schema.files.base;
-        downloadFrom(f.path, f.filename, $('#download-base'), () => ($('#download-base').disabled = false));
-    });
 }
 
 
@@ -182,11 +168,6 @@ function requestBody() {
     const body = {};
     for (const k of [...NUMBER_KEYS, ...BOOL_KEYS, 'layout', 'content', 'ops', 'calc_ops', 'expr_max', 'find_size', 'seed']) body[k] = v[k];
     return body;
-}
-
-function pdfName() {
-    const c = { numbers: 'tall', expressions: 'regnestykker', letters: 'bokstaver', symbols: 'symboler' }[state.values.content];
-    return `kulespill-${state.values.layout.toLowerCase()}-ark-${c}.pdf`;
 }
 
 /* ------------------------------------------------------------- Generering */
@@ -266,11 +247,9 @@ function updateInfo() {
     if (kinds.key) parts.push('fasit');
     parts.push(`${v.variants} sett`);
     $('#model-info').innerHTML = parts.join(' · ');
-    $('#pdf-sub').textContent = `${pdfName()} · ${d.pages.length} sider`;
 }
 
 function updateButtons() {
-    $('#download-pdf').disabled = !(state.valid && !state.loading && state.current);
     sheets.refresh();
 }
 

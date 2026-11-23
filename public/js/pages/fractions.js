@@ -8,8 +8,8 @@
 import { FractionViewer } from '../fraction-viewer.js';
 import {
     API, $, fieldControl, setStatus, setFieldError, clearFieldError, clearAllErrors,
-    showMessage, hideMessage, downloadFrom, downloadAll, bindHelpDialog, bindViewButtons, webglMissing,
-    fmt, escapeHtml, CHECK_ICON, DOWNLOAD_ICON,
+    showMessage, hideMessage, bindHelpDialog, bindViewButtons, webglMissing,
+    fmt, escapeHtml, CHECK_ICON,
 } from '../ui.js';
 import { initSheets } from '../sheets.js';
 
@@ -136,15 +136,6 @@ function bindEvents() {
         viewer?.setDisplay({ mode: state.display.mode });
         setActiveView(null);
     });
-    $('#print-list').addEventListener('click', (e) => {
-        const b = e.target.closest('[data-download]');
-        const part = b && state.current?.parts.find((p) => p.id === b.dataset.download);
-        if (part) downloadFrom(`${part.stl_url}&download=1`, part.filename, b, updateButtons);
-    });
-    $('#download-all').addEventListener('click', () =>
-        downloadAll(state.current?.parts ?? [], $('#download-all'), updateButtons));
-    $('#download-pdf').addEventListener('click', () =>
-        downloadFrom(`${API}?${query('pdf')}`, `${baseName()}.pdf`, $('#download-pdf'), updateButtons));
 }
 
 /* ------------------------------------------------------------- Generering */
@@ -160,10 +151,6 @@ function query(action) {
         q.set(k, Array.isArray(v) ? v.join(',') : typeof v === 'boolean' ? (v ? '1' : '0') : String(v));
     }
     return q;
-}
-
-function baseName() {
-    return `broeksirkler-${String(state.current?.params.diameter ?? state.values.diameter).replace('.', '_')}mm`;
 }
 
 function scheduleGenerate() {
@@ -279,19 +266,13 @@ function renderPrintList(data) {
                 <span class="num frac">${escapeHtml(i.fraction)}</span>
                 <span class="muted">${escapeHtml(i.name)}${note ? ` · ${note}` : ''}</span></th>
             <td class="num count">${p.count} stk</td>
-            <td><button type="button" class="icon-btn" data-download="${escapeHtml(p.id)}"
-                aria-label="Last ned ${escapeHtml(p.filename)}">${DOWNLOAD_ICON}<span>STL</span></button></td>
         </tr>`;
     }).join('');
     const total = data.model.total_pieces;
     $('#print-total').textContent = `${total} ${total === 1 ? 'brikke' : 'brikker'}`;
-    $('#all-sub').textContent = `${data.parts.length} ${data.parts.length === 1 ? 'STL-fil' : 'STL-filer'}, én per brøk`;
 }
 
 function updateButtons() {
     const ready = state.valid && !state.generating && !!state.current;
-    $('#download-all').disabled = !ready;
-    $('#download-pdf').disabled = !ready;
-    document.querySelectorAll('#print-list [data-download]').forEach((b) => (b.disabled = !ready));
     sheets.refresh();
 }

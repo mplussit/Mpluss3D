@@ -9,10 +9,11 @@
  */
 import { LegoViewer } from '../lego-viewer.js';
 import {
-    API, $, setStatus, setFieldError, clearAllErrors, showMessage, hideMessage, downloadFrom, downloadAll,
+    API, $, setStatus, setFieldError, clearAllErrors, showMessage, hideMessage,
     bindHelpDialog, bindViewButtons, webglMissing, fmt, escapeHtml, CHECK_ICON,
 } from '../ui.js';
 import { initSheets } from '../sheets.js';
+import { addToPlate } from '../plate.js';
 
 const MODEL = 'lego';
 const DEBOUNCE_MS = 300;
@@ -39,7 +40,7 @@ let setActiveView = () => {};
 const sheets = initSheets({
     threeD: { group: '#show-options' },
     docs: [{ key: 'pdf', request: () => ({ url: `${API}?action=pdf&model=${MODEL}`, body: requestBody() }) }],
-    stl: () => state.current?.parts ?? [],
+    stl: () => plateParts(),
 });
 
 init().catch((err) => showMessage('Kunne ikke starte appen: ' + err.message));
@@ -340,14 +341,13 @@ function bindEvents() {
     });
     $('#show-bricks').addEventListener('change', updateViewer);
 
-    $('#download-stl').addEventListener('click', () => {
-        const part = state.current?.parts[state.selected];
-        if (part) downloadFrom(`${part.stl_url}&download=1`, part.filename, $('#download-stl'), updateButtons);
+    // Byggeplaten: valgt ramme, eller én av hver ramme, slik rammene er nå.
+    $('#plate-add-frame').addEventListener('click', () => {
+        const part = plateParts()[state.selected];
+        if (part) addFramesToPlate([part], $('#plate-add-frame'));
     });
-    $('#download-all').addEventListener('click', () =>
-        downloadAll(state.current?.parts ?? [], $('#download-all'), updateButtons));
-    $('#download-pdf').addEventListener('click', () =>
-        downloadFrom(`${API}?action=pdf&model=${MODEL}&download=1`, `${archiveName()}-etiketter.pdf`, $('#download-pdf'), updateButtons, requestBody()));
+    $('#plate-add-frames').addEventListener('click', () => addFramesToPlate(plateParts(), $('#plate-add-frames')));
+
 }
 
 function afterFramesChanged() {
@@ -356,14 +356,33 @@ function afterFramesChanged() {
     scheduleGenerate(0);
 }
 
+/** Rammene som STL-filer til byggeplaten, med navn som viser ramme og mål. */
+function plateParts() {
+    return (state.current?.parts ?? []).map((p, i) => ({
+        ...p,
+        count: 1,
+        label: `Ramme ${i + 1} · ${p.info.cols} × ${p.info.rows} (${p.info.count} ${p.info.count === 1 ? 'knott' : 'knotter'})`,
+    }));
+}
+
+async function addFramesToPlate(parts, button) {
+    button.disabled = true;
+    try {
+        const n = await addToPlate(parts.map((part) => ({ part, count: 1 })));
+        $('#plate-feedback').textContent = parts.length === 1
+            ? `${parts[0].label} er lagt på byggeplaten (${n} stk). Åpne 3MF øverst for å se og lagre platen.`
+            : `${parts.length} rammer er lagt på byggeplaten. Åpne 3MF øverst for å se og lagre platen.`;
+    } catch (err) {
+        console.error(err);
+        $('#plate-feedback').textContent = 'Kunne ikke legge rammen på byggeplaten. Prøv igjen.';
+    } finally {
+        updateButtons();
+    }
+}
+
 function clampInt(v, min, max) {
     const n = Number(String(v).trim());
     return Number.isInteger(n) && n >= min && n <= max ? n : null;
-}
-
-function archiveName() {
-    const n = state.frames.length;
-    return `regn-med-lego-${n}-${n === 1 ? 'ramme' : 'rammer'}`;
 }
 
 /* ------------------------------------------------------------- Generering */
@@ -476,14 +495,12 @@ function updateDims() {
     const ok = state.current.parts.every((p) => p.check.ok);
     $('#model-info').innerHTML = `<span class="num">${escapeHtml(i.name)}</span> · ${escapeHtml(part.filename)} · `
         + (ok ? `<span class="valid">${CHECK_ICON}alle rammer er lukkede og målriktige</span>` : '<span class="invalid">kontrollen feilet</span>');
-    $('#stl-sub').textContent = `${part.filename} · ca. ${fmt(Math.round(i.material_g))} g PLA`;
-    $('#all-sub').textContent = `${state.current.parts.length} ${state.current.parts.length === 1 ? 'STL-fil' : 'STL-filer'}, én per ramme`;
-    const labels = state.current.model.labels;
-    $('#pdf-sub').textContent = `Oversikt${labels ? ` og ${labels} ${labels === 1 ? 'etikett' : 'etiketter'}` : ''} i faktisk størrelse`;
 }
 
 function updateButtons() {
     const ready = state.valid && !state.generating && !!state.current;
-    for (const id of ['#download-stl', '#download-all', '#download-pdf']) $(id).disabled = !ready;
+    for (const id of ['#plate-add-frame', '#plate-add-frames']) $(id).disabled = !ready;
+    $('#plate-frame-sub').textContent = `Ramme ${state.selected + 1} av ${state.frames.length}, slik den er nå`;
+    $('#plate-frames-sub').textContent = state.frames.length === 1 ? 'Bare én ramme i prosjektet' : `Én av hver av de ${state.frames.length} rammene`;
     sheets.refresh();
 }

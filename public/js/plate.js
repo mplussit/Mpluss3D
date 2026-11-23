@@ -63,6 +63,18 @@ const COLORS = ['#f36d21', '#2e6db4', '#226b45', '#c8a415', '#8a3fa8', '#c81e1e'
  * @param {() => {filename: string, stl_url: string, count?: number, label?: string}[]} parts
  *        STL-filene på denne siden (tom liste mens modellen lages)
  */
+let plate = null;   // dialogen på denne siden (initPlate)
+
+/**
+ * Legger STL-filer på byggeplaten uten å åpne dialogen (f.eks. knappen
+ * «Legg valgt ramme på byggeplaten» i Regn med Lego). Gir antall objekter lagt til.
+ * @param {{part: {filename: string, stl_url: string, label?: string}, count: number}[]} list
+ */
+export async function addToPlate(list) {
+    if (!plate) throw new Error('Byggeplaten er ikke klar.');
+    return plate.add(list);
+}
+
 export function initPlate(parts) {
     const open = document.getElementById('plate-open');
     const badge = document.getElementById('plate-count');
@@ -498,6 +510,19 @@ export function initPlate(parts) {
     }
 
     store.all().then((all) => { items = all; updateBadge(); }).catch(() => {});
+
+    plate = {
+        async add(list) {
+            items = await store.all();
+            let n = 0;
+            for (const { part, count } of list) {
+                const c = clampCount(count);
+                await addPart(part, c);
+                n += c;
+            }
+            return n;
+        },
+    };
 }
 
 /* ------------------------------------------------------------ Plassering */

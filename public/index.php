@@ -17,7 +17,7 @@
 declare(strict_types=1);
 
 header('X-Content-Type-Options: nosniff');
-$v = '20';   // øk for å tvinge ny CSS/JS i nettleseren
+$v = '21';   // øk for å tvinge ny CSS/JS i nettleseren
 
 $site = require __DIR__ . '/../app/config/pages.php';
 $slug = $_GET['side'] ?? null;
@@ -87,7 +87,7 @@ if ($page && $helpHref !== '') {
     </a>
     <h1><?= $e($page['h1']) ?></h1>
     <button type="button" class="help-btn plate-btn" id="plate-open" title="Bygg en byggeplate med ett eller flere objekter og lagre den som 3MF-fil">
-        <svg width="20" height="14" viewBox="0 0 20 14" aria-hidden="true"><rect x="0.75" y="0.75" width="18.5" height="12.5" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.3"/><text x="10" y="9.6" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="6.2" font-weight="700" fill="currentColor">3MF</text></svg>
+        <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5 14 4.75v6.5L8 14.5 2 11.25v-6.5Z M2 4.75 8 8l6-3.25 M8 8v6.5" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
         3MF <span class="pdf-count" id="plate-count" hidden>0</span>
     </button>
     <button type="button" class="help-btn pdf-btn" id="pdf-open" title="Lag PDF av sidene, eller samle sider fra flere modeller i én PDF">
