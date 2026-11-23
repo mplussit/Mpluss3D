@@ -1164,11 +1164,15 @@ p { margin: 0; }
 .pdf-section { padding: 14px 0; border-top: 1px solid var(--line); }
 .pdf-dialog h2 + .pdf-section { border-top: 0; padding-top: 0; }
 .pdf-pages { max-height: 240px; overflow-y: auto; }
-.pdf-pages-grid { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 4px 18px; }
+.pdf-pages-grid { display: grid; grid-template-columns: 1fr auto auto; align-items: stretch; }
 .pdf-pages-grid.no-fasit { grid-template-columns: 1fr auto; }
-.pdf-pages-grid input[type=checkbox] { justify-self: center; width: 18px; height: 18px; margin: 0; accent-color: var(--ink); }
+.pdf-cell { display: flex; align-items: center; justify-content: center; padding: 3px 9px; }
+.pdf-cell.pdf-page-title { justify-content: flex-start; padding-left: 0; }
+.pdf-row-sep { border-bottom: 1px solid var(--line); }
+.pdf-pages-grid input[type=checkbox] { width: 18px; height: 18px; margin: 0; accent-color: var(--ink); }
 .pdf-pages-grid input[data-kind="fasit"] { accent-color: #c81e1e; }
-.pdf-col-head { font-size: 12px; font-weight: 700; color: var(--ink-2); text-align: center; position: sticky; top: 0; background: var(--paper); }
+.pdf-col-head { font-size: 12px; font-weight: 700; color: var(--ink-2); text-align: center; padding: 0 9px 3px; position: sticky; top: 0; background: var(--paper); }
+.pdf-col-head:first-child { padding-left: 0; }
 .pdf-col-head:first-child { text-align: left; }
 .pdf-page-title { font-size: 15px; cursor: pointer; }
 .pdf-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }

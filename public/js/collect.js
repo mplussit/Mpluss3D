@@ -108,17 +108,19 @@ export function initCollect(source) {
             box.innerHTML = `<p class="muted">${esc(error || (source.loading() ? 'Lager arkene …' : 'Denne siden har ingen PDF.'))}</p>`;
         } else {
             const anyFasit = list.some((p) => p.hasFasit);
+            // Tynn linje under annenhver side (ikke under den siste), så radene er lette å følge.
+            const sep = (i) => (i % 2 === 1 && i < list.length - 1 ? ' pdf-row-sep' : '');
             const fasitCell = (p, i) => {
-                if (!p.hasFasit) return '<span></span>';
-                return `<input type="checkbox" data-page="${i}" data-kind="fasit"${p.fasitReady ? '' : ' disabled title="Lager fasiten …"'}`
-                    + ` aria-label="${esc(p.title)}, fasit">`;
+                if (!p.hasFasit) return `<span class="pdf-cell${sep(i)}"></span>`;
+                return `<span class="pdf-cell${sep(i)}"><input type="checkbox" data-page="${i}" data-kind="fasit"`
+                    + `${p.fasitReady ? '' : ' disabled title="Lager fasiten …"'} aria-label="${esc(p.title)}, fasit"></span>`;
             };
             box.innerHTML = `
                 <div class="pdf-pages-grid${anyFasit ? '' : ' no-fasit'}" role="group" aria-label="Sidene">
                     <span class="pdf-col-head">Side</span><span class="pdf-col-head">Oppgave</span>${anyFasit ? '<span class="pdf-col-head pdf-fasit">Fasit</span>' : ''}
                     ${list.map((p, i) => `
-                        <label class="pdf-page-title" for="pdf-page-${i}">${esc(p.title)}</label>
-                        <input type="checkbox" id="pdf-page-${i}" data-page="${i}" data-kind="task" checked>
+                        <label class="pdf-page-title pdf-cell${sep(i)}" for="pdf-page-${i}">${esc(p.title)}</label>
+                        <span class="pdf-cell${sep(i)}"><input type="checkbox" id="pdf-page-${i}" data-page="${i}" data-kind="task" checked></span>
                         ${anyFasit ? fasitCell(p, i) : ''}`).join('')}
                 </div>`;
         }
