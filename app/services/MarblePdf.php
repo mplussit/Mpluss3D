@@ -14,7 +14,7 @@ final class MarblePdf
     /** @param list<array{items:list<array>}> $pages */
     public function render(array $pages, string $title): string
     {
-        $pdf = new LabelPdf('P', 'A4');
+        $pdf = new LabelPdf('L', 'A4');
         $pdf->SetTitle(LabelPdf::enc($title));
         $pdf->SetCreator('M+ 3D');
         foreach ($pages as $page) {
@@ -44,6 +44,13 @@ final class MarblePdf
             $pdf->SetDash($it['d'][0], $it['d'][1]);
         }
         switch ($it['k']) {
+            case 'group':
+                $pdf->StartTransform($it['m']);
+                foreach ($it['items'] as $child) {
+                    $this->draw($pdf, $child);
+                }
+                $pdf->EndTransform();
+                break;
             case 'rect':
                 $pdf->RectExact($it['x'], $it['y'], $it['w'], $it['h'], $style);
                 break;

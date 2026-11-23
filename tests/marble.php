@@ -11,14 +11,40 @@ $marble = MarbleModel::load(__DIR__ . '/../app/config');
 $mdef = $marble->definition();
 $mp = fn(array $in = []) => $marble->validate($in + ['seed' => 4242]);
 
-/** Alle tegneelementene på alle sidene, med sidenummer. */
+/**
+ * Alle tegneelementene på alle sidene, med sidenummer. Elementer i en gruppe
+ * (hullarket, dreid 90°) gjøres om til sidekoordinater og merkes med 'rot'.
+ */
 $allItems = function (array $pages): Generator {
+    $flat = function (array $items, ?array $m) use (&$flat): Generator {
+        $t = fn(float $x, float $y) => $m === null ? [$x, $y] : [$m[0] * $x + $m[2] * $y + $m[4], $m[1] * $x + $m[3] * $y + $m[5]];
+        foreach ($items as $it) {
+            if ($it['k'] === 'group') {
+                yield from $flat($it['items'], $it['m']);
+                continue;
+            }
+            if ($m !== null) {
+                $it['rot'] = true;
+                if ($it['k'] === 'rect') {
+                    [$x1, $y1] = $t($it['x'], $it['y']);
+                    [$x2, $y2] = $t($it['x'] + $it['w'], $it['y'] + $it['h']);
+                    $it = ['x' => min($x1, $x2), 'y' => min($y1, $y2), 'w' => abs($x2 - $x1), 'h' => abs($y2 - $y1)] + $it;
+                } elseif (isset($it['x'], $it['y'])) {
+                    [$it['x'], $it['y']] = $t($it['x'], $it['y']);
+                }
+            }
+            yield $it;
+        }
+    };
     foreach ($pages as $i => $p) {
-        foreach ($p['items'] as $it) {
+        foreach ($flat($p['items'], null) as $it) {
             yield $i => $it;
         }
     }
 };
+
+/** Elementene på selve hullarket, i arkets egne (udreide) koordinater. */
+$sheetItems = fn(array $page): array => array_merge(...array_map(fn($it) => $it['items'], array_filter($page['items'], fn($it) => $it['k'] === 'group')));
 
 test('kulespill: hullene fra SolidCraft-modellene ligger på arket, med plass til innholdet', function () use ($marble, $mdef, $mp) {
     eq(['A' => 9, 'B' => 6, 'C' => 8], array_map(fn($l) => count($l['holes']), $mdef['layouts']));
@@ -175,7 +201,7 @@ test('kulespill: «Finn hullene» har ulike summer og alle løsningene', functio
     }
 });
 
-test('kulespill: brett A, B og C – riktige hull på arket, og alle sidene merket med bokstaven', function () use ($marble, $mdef, $mp) {
+test('kulespill: brett A, B og C – riktige hull på arket, og alle sidene merket med bokstaven', function () use ($marble, $mdef, $mp, $sheetItems) {
     eq('A', $mp()['layout']);
     rejects($marble, ['layout' => 'D'], 'layout');
     rejects($marble, ['layout' => 'a'], 'layout');
@@ -198,14 +224,15 @@ test('kulespill: brett A, B og C – riktige hull på arket, og alle sidene merk
                 }
             }
             foreach ($d['pages'] as $page) {
-                $texts = array_column(array_filter($page['items'], fn($it) => $it['k'] === 'text'), 't');
+                $texts = array_column(array_filter([...$page['items'], ...$sheetItems($page)], fn($it) => $it['k'] === 'text'), 't');
                 ok(in_array($key, $texts, true), "$key/$c: «{$page['label']}» mangler merket $key");
                 ok((bool) array_filter($texts, fn($t) => str_contains($t, "Kulespill $key") || str_contains($t, "KULESPILL $key")),
                     "$key/$c: «{$page['label']}» mangler «Kulespill {$key}»");
             }
             // Hullarket har en sirkel per hull.
             $holePage = $d['pages'][0];
-            $dashed = array_filter($holePage['items'], fn($it) => $it['k'] === 'circle' && isset($it['d']));
+            eq('L', $holePage['o'], "$key/$c: hullarket er liggende");
+            $dashed = array_filter($sheetItems($holePage), fn($it) => $it['k'] === 'circle' && isset($it['d']));
             eq($n, count($dashed), "$key/$c: hull på arket");
         }
         // Store tallområder må passe med antall hull.
@@ -227,7 +254,7 @@ test('kulespill: sidene – hullark per variant, eller ett felles med bokstaver 
     ok(count(array_keys($long, 'tasks')) >= 2, 'lange oppgaver skal gå over flere sider');
 });
 
-test('kulespill: alt ligger innenfor A4 og over bunnteksten, og teksten i hullene får plass', function () use ($marble, $mdef, $mp, $allItems) {
+test('kulespill: alt ligger innenfor A4 og over bunnteksten, og teksten i hullene får plass', function () use ($marble, $mdef, $mp, $allItems, $sheetItems) {
     $cases = [
         ['content' => 'numbers', 'num_min' => 990, 'num_max' => 999, 'unique' => true],
         ['content' => 'expressions', 'ops' => ['+', '-', '*', '/'], 'expr_max' => 100, 'variants' => 4],
@@ -241,7 +268,10 @@ test('kulespill: alt ligger innenfor A4 og over bunnteksten, og teksten i hullen
             $label = $built['pages'][$pi]['label'];
             $PW = $built['pages'][$pi]['w'];
             $PH = $built['pages'][$pi]['h'];
-            if ($it['k'] === 'text') {
+            if ($it['k'] === 'text' && !empty($it['rot'])) {
+                // Dreid tekst (på hullarket): ankerpunktet ligger godt innenfor siden.
+                ok($it['x'] >= 15 && $it['x'] <= $PW - 15 && $it['y'] >= 20 && $it['y'] <= $PH - 15, "$label: «{$it['t']}» utenfor arket");
+            } elseif ($it['k'] === 'text') {
                 $w = $sh->tw($it['t'], $it['sz'], $it['b']);
                 $x0 = match ($it['a']) { 'C' => $it['x'] - $w / 2, 'R' => $it['x'] - $w, default => $it['x'] };
                 ok($x0 >= 8 && $x0 + $w <= $PW - 8, "$label: «{$it['t']}» går utenfor arket ($x0 + $w)");
@@ -256,7 +286,7 @@ test('kulespill: alt ligger innenfor A4 og over bunnteksten, og teksten i hullen
         $Rc = $mdef['content_diameter'] / 2;
         foreach ($mdef['layouts'][$in['layout']]['holes'] as [$x, $y]) {
             [$cx, $cy] = $sh->toSheet($x, $y);
-            foreach ($holes['items'] as $it) {
+            foreach ($sheetItems($holes) as $it) {
                 if ($it['k'] === 'text' && abs($it['x'] - $cx) < 1e-6 && abs($it['y'] - $cy) < 9) {
                     $w = $sh->tw($it['t'], $it['sz'], true);
                     ok(hypot($w / 2, 0.359 * $it['sz']) <= $Rc + 1e-6, "«{$it['t']}» får ikke plass i hullet");
@@ -286,7 +316,7 @@ test('kulespill: PDF-en har de samme sidene og tekstene som forhåndsvisningen',
         $pdf = $marble->renderPdf($p);
         $pages = $marble->describe($p)['pages'];
         eq(count($pages), preg_match_all('/\/Type \/Page\b/', $pdf), 'antall sider');
-        ok(str_contains($pdf, '/MediaBox [0 0 595.28 841.89]'), 'A4');
+        ok(str_contains($pdf, '/MediaBox [0 0 841.89 595.28]'), 'A4 liggende');
         $content = pdfContent($pdf);
         foreach ($allItems($pages) as $it) {
             if ($it['k'] === 'text') {

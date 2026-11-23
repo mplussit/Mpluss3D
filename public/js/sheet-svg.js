@@ -37,6 +37,8 @@ function paint(it) {
 
 function item(it) {
     switch (it.k) {
+        case 'group':
+            return `<g transform="matrix(${it.m.join(' ')})">${it.items.map(item).join('')}</g>`;
         case 'rect':
             return `<rect x="${it.x}" y="${it.y}" width="${it.w}" height="${it.h}"${paint(it)}/>`;
         case 'line':

@@ -373,7 +373,7 @@ $pdfSegments = function (string $c, float $k): array {
 test('PDF-nett: A4, målestokk 1:1, kontrollinje på nøyaktig 50 mm, kanter i full størrelse', function () use ($sol, $k, $pdfSegments) {
     $pdf = $sol->renderPdf($sol->validate(['shape' => 'cube']));
     ok(str_starts_with($pdf, '%PDF'));
-    ok(str_contains($pdf, '/MediaBox [0 0 595.28 841.89]'), 'A4 stående');
+    ok(str_contains($pdf, '/MediaBox [0 0 841.89 595.28]'), 'A4 liggende');
     $c = pdfContent($pdf);
     foreach (['(Målestokk 1:1. Skriv ut i 100 %', '(Kontrollinje 50 mm:)', '(Klipp)', '(Brett bakover', '(Limflik', '(Bunn)', '(40 × 40 mm)'] as $s) {
         ok(str_contains($c, LabelPdf::enc($s)), "mangler «{$s}»");

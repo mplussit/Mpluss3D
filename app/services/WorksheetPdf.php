@@ -17,8 +17,9 @@ declare(strict_types=1);
  * Underklasser kan legge til egne tokens (f.eks. stablede brøker) ved å
  * overstyre customTokenWidth(), drawCustomToken() og customLineHeight().
  *
- * Alle mål i mm. Oppgavesidene er liggende A4 (som i M+ matematikk), med
- * oppgavene i to spalter. Sider i målestokk 1:1 kan være stående.
+ * Alle mål i mm. Alle sidene er liggende A4 (som i M+ matematikk), også
+ * lærerveiledningene og sidene i målestokk 1:1. Oppgavene står i to spalter,
+ * og lengre tekst kan fordeles i spalter med flowText().
  */
 abstract class WorksheetPdf
 {
@@ -41,7 +42,7 @@ abstract class WorksheetPdf
 
     protected function newDocument(string $title): void
     {
-        $this->pdf = new LabelPdf('P', 'A4');
+        $this->pdf = new LabelPdf('L', 'A4');
         $this->pdf->SetTitle(LabelPdf::enc($title));
         $this->pdf->SetCreator('M+ 3D');
     }
@@ -61,7 +62,7 @@ abstract class WorksheetPdf
         return $this->pageW() - 2 * self::M;
     }
 
-    /** Innhold må slutte over bunnteksten (276 mm på stående A4). */
+    /** Innhold må slutte over bunnteksten (189 mm på liggende A4). */
     protected function bottom(): float
     {
         return $this->pageH() - 21.0;
@@ -106,9 +107,15 @@ abstract class WorksheetPdf
     /** Overskrift i brødteksten (12 pt). Returnerer y under overskriften. */
     protected function subheading(float $y, string $text): float
     {
+        return $this->subheadingAt(self::M, $y, $text);
+    }
+
+    /** Overskrift i en spalte som starter i $x. */
+    protected function subheadingAt(float $x, float $y, string $text): float
+    {
         $this->pdf->SetFont('Helvetica', 'B', 12);
         $this->pdf->SetTextColor(...self::INK);
-        $this->pdf->TextUtf8(self::M, $y, $text);
+        $this->pdf->TextUtf8($x, $y, $text);
         return $y + 2.5;
     }
 
@@ -147,6 +154,95 @@ abstract class WorksheetPdf
         return $lines * $lineH;
     }
 
+    /* ================================================== Tekst i spalter */
+
+    /**
+     * De to spaltene på en liggende side: [[x, bredde], [x, bredde]].
+     * $leftW gir venstre spalte en egen bredde (resten går til høyre spalte).
+     * @return array{array{float,float},array{float,float}}
+     */
+    protected function twoColumns(?float $leftW = null): array
+    {
+        $W = $this->contentW();
+        $l = $leftW ?? ($W - self::COLUMN_GAP) / 2;
+        return [[self::M, $l], [self::M + $l + self::COLUMN_GAP, $W - $l - self::COLUMN_GAP]];
+    }
+
+    /**
+     * Fordeler tekstblokker i spalter, ovenfra og ned, og fortsetter i neste
+     * spalte når en blokk ikke får plass. En overskrift flyttes alltid sammen
+     * med blokken under. Blokker som ikke får plass i siste spalte, utelates.
+     *
+     *   ['h', tekst]                     overskrift (12 pt)
+     *   ['p', tekst, mellomrom etter]    avsnitt (mellomrom 5 mm hvis utelatt)
+     *   ['li', tekst]                    kulepunkt
+     *   ['gap', mm]                      mellomrom (ikke øverst i en spalte)
+     *   ['box', høyde, fn(x, y, w)]      egen tegning med fast høyde (+ 5 mm etter)
+     *
+     * @param list<array{float,float,float}> $cols [x, y, bredde] for hver spalte
+     * @return array{int,float} [spalten og y der teksten sluttet]
+     */
+    protected function flowText(array $blocks, array $cols, float $size = 9.5, float $lineH = 4.6): array
+    {
+        $c = 0;
+        [$x, $y, $w] = $cols[0];
+        $top = true;
+        $bottom = $this->bottom();
+        $height = function (array $b) use (&$w, $size, $lineH): float {
+            return match ($b[0]) {
+                'p'   => $this->paragraphHeight($b[1], $size, $lineH, $w),
+                'li'  => $this->paragraphHeight($b[1], $size, $lineH, $w - 4),
+                'box' => $b[1],
+                default => 0.0,
+            };
+        };
+        for ($i = 0; $i < count($blocks); $i++) {
+            $b = $blocks[$i];
+            if ($b[0] === 'gap') {
+                if (!$top) {
+                    $y += $b[1];
+                }
+                continue;
+            }
+            // Overskriften må ha plass til blokken under.
+            $need = $b[0] === 'h'
+                ? 2.5 + (isset($blocks[$i + 1]) ? $height($blocks[$i + 1]) : 0)
+                : $height($b);
+            if ($y + $need > $bottom + 0.01) {
+                if (!isset($cols[$c + 1])) {
+                    break;
+                }
+                [$x, $y, $w] = $cols[++$c];
+                $top = true;
+                $i--;
+                continue;
+            }
+            $pdf = $this->pdf;
+            switch ($b[0]) {
+                case 'h':
+                    $pdf->SetFont('Helvetica', 'B', 12);
+                    $pdf->SetTextColor(...self::INK);
+                    $pdf->TextUtf8($x, $y, $b[1]);
+                    $y += 2.5;
+                    break;
+                case 'p':
+                    $y = $this->paragraph($y, $b[1], $size, $lineH, $x, $w) + ($b[2] ?? 5.0);
+                    break;
+                case 'li':
+                    $pdf->SetFillColor(243, 109, 33);
+                    $pdf->RectExact($x + 0.5, $y + 1.6, 1.6, 1.6, 'F');
+                    $y = $this->paragraph($y, $b[1], $size, $lineH, $x + 4, $w - 4) + 0.8;
+                    break;
+                case 'box':
+                    ($b[2])($x, $y, $w);
+                    $y += $b[1] + 5;
+                    break;
+            }
+            $top = false;
+        }
+        return [$c, $y];
+    }
+
     /* ================================================== Oppgaveseksjoner */
 
     /** Liggende side? */
@@ -155,7 +251,7 @@ abstract class WorksheetPdf
         return $this->pageW() > $this->pageH();
     }
 
-    /** Spalter for oppgavelister: to på liggende sider, én på stående. */
+    /** Spalter for oppgavelister: to på liggende sider (alle sidene), én på stående. */
     protected function columns(): int
     {
         return $this->landscape() ? 2 : 1;

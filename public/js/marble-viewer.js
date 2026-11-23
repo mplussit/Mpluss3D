@@ -89,7 +89,11 @@ export class MarbleViewer extends ModelViewer {
         this.sheetKey = key;
         const w = Math.round(sheet.width * PX_PER_MM);
         const h = Math.round(sheet.height * PX_PER_MM);
-        const svg = pageSvg(page, { view: [sheet.x, sheet.y, sheet.width, sheet.height], width: w, height: h });
+        // På PDF-siden er arket dreid 90° i en gruppe. Teksturen bruker elementene
+        // i gruppen, som har arkets egne (udreide) koordinater.
+        const board = page.items.find((it) => it.k === 'group')?.items;
+        const svg = pageSvg(board ? { ...page, items: board } : page,
+            { view: [sheet.x, sheet.y, sheet.width, sheet.height], width: w, height: h });
         const url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
         try {
             const img = new Image();

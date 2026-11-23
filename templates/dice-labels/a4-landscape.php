@@ -1,6 +1,6 @@
 <?php
 /**
- * Mal for etikettark: A4 stående.
+ * Mal for etikettark: A4 liggende (som de andre PDF-ene i M+ 3D).
  *
  * Tekster og layoutkonstanter er samlet her, slik at innhold kan endres
  * (eller oversettes) uten å endre PdfGenerator. Alle mål i millimeter.
@@ -9,7 +9,7 @@
 declare(strict_types=1);
 
 return [
-    'page'   => ['format' => 'A4', 'orientation' => 'P', 'width' => 210, 'height' => 297],
+    'page'   => ['format' => 'A4', 'orientation' => 'L', 'width' => 297, 'height' => 210],
     'margin' => 15,
 
     'face_names' => [

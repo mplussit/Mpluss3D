@@ -13,6 +13,14 @@ declare(strict_types=1);
  *   ['k' => 'circle', 'x', 'y', 'r', 'f', 's', 'lw', 'd']
  *   ['k' => 'poly',   'p' => [[x, y], …], 'f', 's', 'lw', 'open' => true for åpen linje]
  *   ['k' => 'text',   'x', 'y' (grunnlinje), 't', 'sz' (mm), 'b' (fet), 'c' (farge), 'a' (L, C, R)]
+ *   ['k' => 'group',  'm' => [a, b, c, d, e, f], 'items' => [...]]
+ *       elementer i et eget koordinatsystem: (x, y) → (a·x + c·y + e, b·x + d·y + f),
+ *       som SVG-attributtet transform="matrix(a b c d e f)"
+ *
+ * Alle sidene er liggende A4. Hullarket (160 × 250 mm) er for høyt til å stå
+ * rett på en liggende side, så selve arket ligger i en gruppe som er dreid 90°
+ * (toppen mot venstre). Inne i gruppen er koordinatene de samme som før
+ * (toSheet(), SHEET_X og SHEET_Y), så 3D-visningen kan bruke dem direkte.
  *
  * Både PDF-en (MarblePdf) og hullarket på 3D-modellen i nettleseren
  * (public/js/sheet-svg.js) tegner nøyaktig disse elementene, så de kan
@@ -24,9 +32,16 @@ final class MarbleSheets
 {
     public const PAGE_W = 210.0;
     public const PAGE_H = 297.0;
-    /** Arkets øvre venstre hjørne på A4 (160 × 250 mm midt på arket). */
+    /**
+     * Arkets øvre venstre hjørne (160 × 250 mm) i hullarkets egne koordinater,
+     * som er en stående A4 med arket midt på. På den liggende siden dreies dette
+     * 90° (se sheetMatrix()).
+     */
     public const SHEET_X = 25.0;
     public const SHEET_Y = 23.5;
+    /** Der arket havner på den liggende siden: øvre venstre hjørne av det dreide arket. */
+    public const SHEET_LX = 23.5;
+    public const SHEET_LY = 27.0;
 
     private const M = 18.0;                 // marg på oppgavesidene
     private const BOTTOM = 276.0;           // innhold slutter over bunnteksten
@@ -39,7 +54,7 @@ final class MarbleSheets
     private const HOLE_FILL = '#fff3e6';
     private const PT = 25.4 / 72;           // mm per punkt
 
-    /** Gjeldende side: hullarket er stående, oppgaver, verdiark og fasit liggende (som i M+ matematikk). */
+    /** Gjeldende side: alle sidene er liggende (som i M+ matematikk). */
     private float $pw = self::PAGE_W;
     private float $ph = self::PAGE_H;
 
@@ -289,7 +304,7 @@ final class MarbleSheets
         ];
     }
 
-    /** Stående (hullarket, 1:1) eller liggende A4 for sidene som lages etterpå. */
+    /** Liggende A4 (alle sidene); $landscape = false gir stående mål. */
     private function orient(bool $landscape): void
     {
         [$this->pw, $this->ph] = $landscape ? [self::PAGE_H, self::PAGE_W] : [self::PAGE_W, self::PAGE_H];
@@ -309,10 +324,23 @@ final class MarbleSheets
 
     /* -------------------------------------------------------------- Hullark */
 
-    /** Arket som legges under spillet: 160 × 250 mm med innholdet over hullene. */
+    /**
+     * Transformasjonen fra hullarkets egne koordinater til den liggende siden:
+     * arket dreies 90° med toppen mot venstre, og øvre venstre hjørne av det
+     * dreide arket havner i (SHEET_LX, SHEET_LY).
+     * @return array{float,float,float,float,float,float}
+     */
+    public function sheetMatrix(): array
+    {
+        $W = $this->def['board']['width'];
+        return [0.0, -1.0, 1.0, 0.0, self::SHEET_LX - self::SHEET_Y, self::SHEET_LY + $W + self::SHEET_X];
+    }
+
+    /** Arket som legges under spillet: 160 × 250 mm med innholdet over hullene, dreid 90° på en liggende side. */
     private function holeSheet(array $v, ?int $num): void
     {
-        $this->orient(false);
+        $this->orient(true);
+        $page = [];
         $items = [];
         $x0 = self::SHEET_X;
         $y0 = self::SHEET_Y;
@@ -320,10 +348,12 @@ final class MarbleSheets
         $L = $this->def['board']['length'];
         $board = $this->p['layout'];
         $title = "Kulespill $board · Hullark" . ($num ? " · Sett $num" : ($this->p['variants'] > 1 ? ' · alle sett' : ''));
-        array_push($items, ...$this->badge($x0, 5.0, 9.0));
-        $items[] = $this->text($x0 + 12, 13.5, $title, 3.9, true, self::INK);
-        $items[] = $this->text($x0 + $W, 13.5, 'Skriv ut i 100 % (faktisk størrelse)', 2.6, false, self::INK2, 'R');
-        $items[] = $this->text($x0 + $W, 18.0, 'Klipp langs hjørnemerkene: 160 × 250 mm', 2.6, false, self::INK2, 'R');
+        // Topptekst på den liggende siden (ikke dreid).
+        $lx = self::SHEET_LX;
+        array_push($page, ...$this->badge($lx, 5.0, 9.0));
+        $page[] = $this->text($lx + 12, 13.5, $title, 3.9, true, self::INK);
+        $page[] = $this->text($lx + $L, 13.5, 'Skriv ut i 100 % (faktisk størrelse) · klipp langs hjørnemerkene: 160 × 250 mm', 2.6, false, self::INK2, 'R');
+        $page[] = $this->text($lx + $L, 18.0, 'Toppen av spillet er mot venstre', 2.6, false, self::INK2, 'R');
 
         // Skjærelinje (svak) og hjørnemerker.
         $items[] = ['k' => 'rect', 'x' => $x0, 'y' => $y0, 'w' => $W, 'h' => $L, 's' => self::RULE, 'lw' => 0.2, 'd' => [1.5, 1.5]];
@@ -365,18 +395,21 @@ final class MarbleSheets
             $items[] = $this->text($x0 + 4, $y0 + $L - 4, $note, 2.4, false, '#a8a196');
         }
 
-        // Kontrollinje på 100 mm.
-        $rx = $x0;
-        $ry = 286.0;
-        $items[] = ['k' => 'line', 'x1' => $rx, 'y1' => $ry, 'x2' => $rx + 100, 'y2' => $ry, 's' => self::INK, 'lw' => 0.2];
+        // Selve arket, dreid 90° på siden.
+        $page[] = ['k' => 'group', 'm' => $this->sheetMatrix(), 'items' => $items];
+
+        // Kontrollinje på 100 mm (ikke dreid).
+        $rx = $lx;
+        $ry = 202.0;
+        $page[] = ['k' => 'line', 'x1' => $rx, 'y1' => $ry, 'x2' => $rx + 100, 'y2' => $ry, 's' => self::INK, 'lw' => 0.2];
         for ($mm = 0; $mm <= 100; $mm += 5) {
             $len = $mm % 10 === 0 ? 3.0 : 1.8;
-            $items[] = ['k' => 'line', 'x1' => $rx + $mm, 'y1' => $ry, 'x2' => $rx + $mm, 'y2' => $ry - $len, 's' => self::INK, 'lw' => $mm % 10 === 0 ? 0.25 : 0.15];
+            $page[] = ['k' => 'line', 'x1' => $rx + $mm, 'y1' => $ry, 'x2' => $rx + $mm, 'y2' => $ry - $len, 's' => self::INK, 'lw' => $mm % 10 === 0 ? 0.25 : 0.15];
         }
-        $items[] = $this->text($rx + 104, $ry, 'Kontroll: skal være nøyaktig 100 mm', 2.5, false, self::INK2);
+        $page[] = $this->text($rx + 104, $ry, 'Kontroll: skal være nøyaktig 100 mm', 2.5, false, self::INK2);
 
         $label = 'Hullark' . ($num ? " $num" : '');
-        $this->pages[] = ['kind' => 'holes', 'label' => $label, 'variant' => $num, 'o' => 'P', 'w' => $this->pw, 'h' => $this->ph, 'items' => $items];
+        $this->pages[] = ['kind' => 'holes', 'label' => $label, 'variant' => $num, 'o' => 'L', 'w' => $this->pw, 'h' => $this->ph, 'items' => $page];
     }
 
     /** Spillkoordinater (mm) → punkt på A4. */

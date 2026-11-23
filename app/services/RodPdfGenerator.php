@@ -92,117 +92,101 @@ final class RodPdfGenerator extends WorksheetPdf
     {
         $pdf = $this->pdf;
         $p = $this->p;
-        $W = $this->contentW();
         $u = RodModel::fmt($p['unit']);
-        $y = $this->header(1, 'Tallstaver – lærerveiledning', orientation: 'P', tab: 'Lærerveiledning', lead: sprintf(
+        $y = $this->header(1, 'Tallstaver – lærerveiledning', tab: 'Lærerveiledning', lead: sprintf(
             'Staver i opptil ti lengder til 3D-printing. Stav 1 er en kube på %1$s × %1$s × %1$s mm, og stav n er n ganger så lang. '
             . 'Alle stavene har samme tverrsnitt og plane ender, så to staver lagt ende mot ende er nøyaktig like lange som summen.', $u
         ));
+        [[$xL, $wL], [$xR, $wR]] = $this->twoColumns();
 
-        // --- Tabell: stavene, tegnet som en trapp -----------------------------
-        $y = $this->subheading($y, 'Dette skal skrives ut') + 1.5;
-        $cols = [['Stav', 46], ['Farge', 30], ['Mål (mm)', 26], ['STL-fil', 34], ['Antall', 20], ['Ca. PLA', 18]];
+        // --- Venstre spalte: tabell over stavene, tegnet som en trapp ---------
+        $top = $y;
+        $y = $this->subheadingAt($xL, $y, 'Dette skal skrives ut') + 1.5;
+        $cols = [['Stav', 30], ['Farge', 20], ['Mål (mm)', 23], ['STL-fil', 28], ['Antall', 12], ['PLA', 11]];
         $rowH = 6.0;
         $pdf->SetFillColor(...self::SOFT);
-        $pdf->RectExact(self::M, $y, $W, 6.5, 'F');
-        $pdf->SetFont('Helvetica', 'B', 9);
+        $pdf->RectExact($xL, $y, $wL, 6.5, 'F');
+        $pdf->SetFont('Helvetica', 'B', 8.5);
         $pdf->SetTextColor(...self::INK);
-        $x = self::M;
+        $x = $xL;
         foreach ($cols as [$label, $w]) {
-            $pdf->TextUtf8($x + 2, $y + 4.5, $label);
+            $pdf->TextUtf8($x + 1.5, $y + 4.5, $label);
             $x += $w;
         }
         $y += 6.5;
         $pieces = 0;
         $grams = 0.0;
-        $s = 3.6;
         foreach ($this->model->parts($p) as $part) {
             $i = $part['info'];
             $n = $i['length'];
             $pieces += $part['count'];
             $g = $part['count'] * $i['material']['print_g'];
             $grams += $g;
-            $x = self::M;
-            $this->drawRod($x + 2, $y + 0.9, $n, $s, $rowH - 1.8, true);
+            $x = $xL;
+            $this->drawRod($x + 1.5, $y + 0.9, $n, 2.6, $rowH - 1.8, true);
             $x += $cols[0][1];
-            $pdf->SetFont('Helvetica', '', 9);
+            $pdf->SetFont('Helvetica', '', 8);
             $pdf->SetTextColor(...self::INK);
-            $pdf->TextUtf8($x + 2, $y + 4.2, $i['color_name']);
+            $pdf->TextUtf8($x + 1.5, $y + 4.2, $i['color_name']);
             $x += $cols[1][1];
-            $pdf->TextUtf8($x + 2, $y + 4.2, implode(' × ', array_map([RodModel::class, 'fmt'], $i['size_mm'])));
+            $pdf->TextUtf8($x + 1.5, $y + 4.2, implode(' × ', array_map([RodModel::class, 'fmt'], $i['size_mm'])));
             $x += $cols[2][1];
-            $pdf->SetFont('Courier', '', 8.5);
-            $pdf->TextUtf8($x + 2, $y + 4.2, $part['filename']);
+            $pdf->SetFont('Courier', '', 7.5);
+            $pdf->TextUtf8($x + 1.5, $y + 4.2, $part['filename']);
             $x += $cols[3][1];
-            $pdf->SetFont('Helvetica', 'B', 9);
-            $pdf->TextUtf8($x + 2, $y + 4.2, $part['count'] . ' stk');
+            $pdf->SetFont('Helvetica', 'B', 8);
+            $pdf->TextUtf8($x + 1.5, $y + 4.2, $part['count'] . ' stk');
             $x += $cols[4][1];
-            $pdf->SetFont('Helvetica', '', 9);
-            $pdf->TextUtf8($x + 2, $y + 4.2, RodModel::grams($g));
+            $pdf->SetFont('Helvetica', '', 8);
+            $pdf->TextUtf8($x + 1.5, $y + 4.2, RodModel::grams($g));
             $y += $rowH;
             $pdf->SetDrawColor(...self::RULE);
             $pdf->SetLineWidth(0.2);
-            $pdf->LineExact(self::M, $y, self::M + $W, $y);
+            $pdf->LineExact($xL, $y, $xL + $wL, $y);
         }
-        $pdf->SetFont('Helvetica', 'B', 9.5);
+        $pdf->SetFont('Helvetica', 'B', 9);
         $pdf->SetTextColor(...self::INK);
-        $pdf->TextUtf8(self::M + 2, $y + 4.6, 'Totalt');
-        $xCount = self::M + array_sum(array_column(array_slice($cols, 0, 4), 1));
-        $pdf->TextUtf8($xCount + 2, $y + 4.6, "$pieces stk");
-        $pdf->TextUtf8($xCount + $cols[4][1] + 2, $y + 4.6, RodModel::grams($grams));
-        $y += 8.5;
+        $pdf->TextUtf8($xL + 1.5, $y + 4.6, 'Totalt');
+        $xCount = $xL + array_sum(array_column(array_slice($cols, 0, 4), 1));
+        $pdf->TextUtf8($xCount + 1.5, $y + 4.6, "$pieces stk");
+        $pdf->TextUtf8($xCount + $cols[4][1] + 1.5, $y + 4.6, RodModel::grams($grams));
+        $y += 7.5;
         $pdf->SetFont('Helvetica', '', 8);
         $pdf->SetTextColor(...self::INK2);
-        $pdf->TextUtf8(self::M, $y + 1, sprintf(
+        $pdf->SetXY($xL - 1, $y);
+        $pdf->MultiCell($wL + 2, 3.8, LabelPdf::enc(sprintf(
             'Filament er et overslag for PLA med 2 vegger og 15 %% fyll. Alle stavene etter hverandre blir %d enheter (%s cm).',
             $this->tasks->totalLength(), RodModel::fmt(round($this->tasks->totalLength() * $p['unit'] / 10, 1))
-        ));
-        $y += 7;
+        )));
+        $y = $pdf->GetY() + 6;
 
-        // --- Farger -----------------------------------------------------------
-        $y = $this->subheading($y, 'Farger');
-        $text = match ($p['color_mode']) {
+        // --- Teksten: under tabellen og videre i høyre spalte ------------------
+        $colors = match ($p['color_mode']) {
             'single' => 'Alle stavene har samme farge. Da må elevene sammenligne lengdene direkte, og det er lengden alene som viser verdien. ',
             'custom' => 'Stavene har farger valgt av læreren (se tabellen). Staver med samme lengde har samme farge, så fargen hjelper elevene å kjenne igjen lengdene. ',
             default  => 'Stavene har de klassiske Cuisenaire-fargene: 1 hvit, 2 rød, 3 lysegrønn, 4 lilla, 5 gul, 6 mørkegrønn, 7 svart, 8 brun, 9 blå og 10 oransje. '
                 . 'Fargene gjør det lett å finne en lengde, og «familier» hører sammen: rød 2, lilla 4 og brun 8 er doblinger. ',
         };
-        $text .= 'STL-filer har ingen farge: skriv ut hver lengde med sitt filament, eller mal stavene etterpå.';
-        $y = $this->paragraph($y, $text) + 5;
-
-        // --- Uten tall ------------------------------------------------------------
-        $y = $this->subheading($y, 'Stavene kan brukes uten tall');
-        $y = $this->paragraph($y, 'Elevene trenger ikke å kjenne tallverdiene på forhånd. La dem først utforske: Hvilke to staver er like lange som den gule? '
-            . 'Hvilken stav er dobbelt så lang som den røde? Når de setter navn på lengdene selv, må de resonnere om sammenhengene. '
-            . 'Tallene kan komme senere – og verdien til en stav avhenger av hvilken stav som er én hel (side 6).') + 5;
-
-        // --- Pedagogisk bruk og aktiviteter -----------------------------------
-        $y = $this->subheading($y, 'Forslag til aktiviteter');
-        $tips = [
-            'Tall og tallkombinasjoner: Lag «tog» som er like lange som en stav. Finn alle måtene å bygge 10 på (side 2).',
-            'Addisjon og subtraksjon: Legg to staver etter hverandre og finn staven som er like lang. Legg to staver ved siden av hverandre og finn forskjellen (side 3 og 4).',
-            'Multiplikasjon og divisjon: Legg like staver etter hverandre (3 × 4). Hvor mange røde staver er like lange som den brune? (side 5)',
-            'Partall og oddetall: Kan staven bygges med to like staver? (side 5)',
-            'Brøk og forhold: Velg en stav som én hel og finn halvdelen, femtedelen … Bytt hel og se at verdiene endres (side 6).',
-            'Mønstre: Bygg en trapp fra 1 til 10. Hva skjer når du legger en hvit stav på hvert trinn?',
+        $colors .= 'STL-filer har ingen farge: skriv ut hver lengde med sitt filament, eller mal stavene etterpå.';
+        $blocks = [
+            ['h', 'Farger'], ['p', $colors],
+            ['h', 'Stavene kan brukes uten tall'],
+            ['p', 'Elevene trenger ikke å kjenne tallverdiene på forhånd. La dem først utforske: Hvilke to staver er like lange som den gule? '
+                . 'Hvilken stav er dobbelt så lang som den røde? Når de setter navn på lengdene selv, må de resonnere om sammenhengene. '
+                . 'Tallene kan komme senere – og verdien til en stav avhenger av hvilken stav som er én hel (side 6).'],
+            ['h', 'Forslag til aktiviteter'],
+            ['li', 'Tall og tallkombinasjoner: Lag «tog» som er like lange som en stav. Finn alle måtene å bygge 10 på (side 2).'],
+            ['li', 'Addisjon og subtraksjon: Legg to staver etter hverandre og finn staven som er like lang. Legg to staver ved siden av hverandre og finn forskjellen (side 3 og 4).'],
+            ['li', 'Multiplikasjon og divisjon: Legg like staver etter hverandre (3 × 4). Hvor mange røde staver er like lange som den brune? (side 5)'],
+            ['li', 'Partall og oddetall: Kan staven bygges med to like staver? (side 5)'],
+            ['li', 'Brøk og forhold: Velg en stav som én hel og finn halvdelen, femtedelen … Bytt hel og se at verdiene endres (side 6).'],
+            ['li', 'Mønstre: Bygg en trapp fra 1 til 10. Hva skjer når du legger en hvit stav på hvert trinn?'],
+            ['gap', 4.2],
+            ['h', 'Utskrift'],
+            ['p', 'Stavene ligger slik de skal skrives ut og trenger ikke støtte. Kantene mot byggeplaten har en liten fas i stedet for avrunding. '
+                . 'Endeflatene er plane, så stavene kan legges ende mot ende. Anbefalt: PLA, 0,2 mm laghøyde, 2–3 vegger, 15 % fyll.'],
         ];
-        foreach ($tips as $tip) {
-            if ($y + 5 > $this->bottom()) {
-                break;
-            }
-            $pdf->SetFillColor(243, 109, 33);
-            $pdf->RectExact(self::M + 0.5, $y + 1.6, 1.6, 1.6, 'F');
-            $y = $this->paragraph($y, $tip, 9.5, 4.6, self::M + 4, $W - 4) + 0.8;
-        }
-        $y += 5;
-
-        // --- Utskrift -------------------------------------------------------------
-        $print = 'Stavene ligger slik de skal skrives ut og trenger ikke støtte. Kantene mot byggeplaten har en liten fas i stedet for avrunding. '
-            . 'Endeflatene er plane, så stavene kan legges ende mot ende. Anbefalt: PLA, 0,2 mm laghøyde, 2–3 vegger, 15 % fyll.';
-        if ($y + 2.5 + $this->paragraphHeight($print, 9.5, 4.6, $W) <= $this->bottom()) {
-            $y = $this->subheading($y, 'Utskrift');
-            $this->paragraph($y, $print);
-        }
+        $this->flowText($blocks, [[$xL, $y, $wL], [$xR, $top, $wR]]);
         $this->footer();
     }
 

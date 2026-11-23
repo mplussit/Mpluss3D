@@ -5,8 +5,12 @@ declare(strict_types=1);
  * Plasserer et utbrettingsnett på A4-ark. Felles for PDF-en og 2D-visningen,
  * så de viser nøyaktig samme oppsett.
  *
+ * Alle arkene er liggende A4 (som resten av PDF-ene i M+ 3D). Et nett som er
+ * høyere enn det er bredt, får plass ved å dreies 90° (rotasjonene er egne
+ * nettvarianter, se Solid::withRotations()).
+ *
  * Prioritering (målestokk 1:1 er standard):
- *   1. Ett A4-ark i 1:1, stående eller liggende.
+ *   1. Ett liggende A4-ark i 1:1.
  *   2. Andre nettvarianter og rotasjoner, i rekkefølgen figuren foretrekker.
  *   3. Får ingen plass: flere A4-ark i 1:1 med overlapp og sammenføyningsmerker
  *      ($mode = 'tiles', standard), eller
@@ -20,6 +24,8 @@ final class NetLayout
     public const BOTTOM = 25.0;     // forklaring og kontrollinje på 50 mm
     public const OVERLAP = 12.0;    // overlapp mellom ark ved flersidig utskrift
     public const SCALES = [0.8, 2 / 3, 0.5, 0.4, 1 / 3, 0.25, 0.2];
+    /** Arkretningene som prøves. Bare liggende, så alle sidene har samme retning. */
+    public const ORIENTATIONS = ['L'];
 
     /** @return array{float,float} [bredde, høyde] */
     public static function page(string $o): array
@@ -42,7 +48,7 @@ final class NetLayout
     {
         // 1–2: første variant som får plass på ett ark i 1:1
         foreach ($nets as $i => $net) {
-            foreach (['P', 'L'] as $o) {
+            foreach (self::ORIENTATIONS as $o) {
                 [$ax, $ay, $aw, $ah] = self::area($o);
                 if ($net->width() <= $aw + 1e-9 && $net->height() <= $ah + 1e-9) {
                     return [
@@ -65,7 +71,7 @@ final class NetLayout
         // 3: færrest ark i 1:1 (ved likt antall: den foretrukne varianten)
         $best = null;
         foreach ($nets as $i => $net) {
-            foreach (['P', 'L'] as $o) {
+            foreach (self::ORIENTATIONS as $o) {
                 [, , $aw, $ah] = self::area($o);
                 $cols = self::count($net->width(), $aw);
                 $rows = self::count($net->height(), $ah);
@@ -102,7 +108,7 @@ final class NetLayout
             'cols'        => $best['cols'],
             'pages'       => $tiles,
             'overlap'     => self::OVERLAP,
-            'overview'    => self::overview($tiles, [self::MARGIN, 62.0, 190.0, 195.0]),
+            'overview'    => self::overview($tiles, [self::MARGIN, 56.0, 277.0, 129.0]),
             'scaled_alt'  => ['scale' => $scaled['scale'], 'label' => $scaled['label']],
         ];
     }
@@ -147,7 +153,7 @@ final class NetLayout
     {
         foreach (self::SCALES as $s) {
             foreach ($nets as $i => $net) {
-                foreach (['P', 'L'] as $o) {
+                foreach (self::ORIENTATIONS as $o) {
                     [$ax, $ay, $aw, $ah] = self::area($o);
                     if ($net->width() * $s <= $aw && $net->height() * $s <= $ah) {
                         return [

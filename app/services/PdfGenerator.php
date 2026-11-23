@@ -2,8 +2,8 @@
 declare(strict_types=1);
 
 /**
- * Lager et A4-ark med seks etiketter (én per side), monteringsveiledning
- * og en målestokk på 100 mm.
+ * Lager et liggende A4-ark med seks etiketter (én per side) til venstre,
+ * monteringsveiledning til høyre og en målestokk på 100 mm nederst.
  *
  * PDF-generatoren er uavhengig av OpenSCAD. Den bruker de samme validerte
  * parameterne og samme modellbeskrivelse (DiceModel::describe()) som
@@ -37,7 +37,7 @@ final class PdfGenerator
 
     public function __construct(private DiceModel $model, ?string $template = null)
     {
-        $this->tpl = require $template ?? dirname(__DIR__, 2) . '/templates/dice-labels/a4-portrait.php';
+        $this->tpl = require $template ?? dirname(__DIR__, 2) . '/templates/dice-labels/a4-landscape.php';
     }
 
     /**
@@ -50,6 +50,7 @@ final class PdfGenerator
         $t = $this->tpl['text'];
         $m = $this->tpl['margin'];
         $pageW = $this->tpl['page']['width'];
+        $pageH = $this->tpl['page']['height'];
         $contentW = $pageW - 2 * $m;
         $L = (float) $params['label_size'];
         $dims = $this->dims($desc);
@@ -80,16 +81,17 @@ final class PdfGenerator
             $y += 4;
         }
 
-        // --- Etiketter --------------------------------------------------------
+        // --- Etiketter (venstre) ----------------------------------------------
         $pdf->SetTextColor(20, 20, 20);
         $pdf->SetFont('Helvetica', 'B', 11);
         $pdf->TextUtf8($m, $y + 3, $t['labels_heading']);
+        $top = $y;
         $y += 6;
 
         $cols = 3;
-        $gapX = min(25.0, ($contentW - $cols * $L) / ($cols - 1));
+        $gapX = 12.0;
         $gridW = $cols * $L + ($cols - 1) * $gapX;
-        $x0 = $m + ($contentW - $gridW) / 2;
+        $x0 = $m;
         $rowPitch = 5 + $L + 11;
 
         foreach (self::FACE_ORDER as $i => $face) {
@@ -108,51 +110,52 @@ final class PdfGenerator
             $towards = $this->tpl['face_names'][$this->tpl['up_towards'][$face]];
             $pdf->TextCentered($lx + $L / 2, $ly + $L + 8.5, str_replace('{towards}', $towards, $t['caption_up']));
         }
-        $y += 5 + 2 * $rowPitch;
 
-        // --- Monteringsveiledning --------------------------------------------
+        // --- Monteringsveiledning (høyre spalte) ------------------------------
+        $xR = $m + max($gridW, 110.0) + 14;
+        $wR = $m + $contentW - $xR;
         $pdf->SetDrawColor(200, 200, 200);
         $pdf->SetLineWidth(0.2);
-        $pdf->LineExact($m, $y, $m + $contentW, $y);
-        $y += 6;
+        $pdf->LineExact($xR - 7, $top, $xR - 7, $top + 6 + 5 + 2 * $rowPitch - 8);
+        $y = $top;
         $pdf->SetTextColor(20, 20, 20);
         $pdf->SetFont('Helvetica', 'B', 11);
-        $pdf->TextUtf8($m, $y, $t['assembly_heading']);
-        $y += 4;
+        $pdf->TextUtf8($xR, $y + 3, $t['assembly_heading']);
+        $y += 9;
 
-        $s = 12.0;                                   // rutestørrelse i korset
-        $this->drawNet($pdf, $m, $y, $s, $desc['faces'], $params['decor']);
+        $s = min(12.0, ($wR - 36) / 4);              // rutestørrelse i korset
+        $this->drawNet($pdf, $xR, $y, $s, $desc['faces'], $params['decor']);
         $pdf->SetFont('Helvetica', '', 7);
         $pdf->SetTextColor(90, 90, 90);
-        $pdf->TextCentered($m + 2 * $s, $y + 3 * $s + 4, $t['net_caption']);
+        $pdf->TextCentered($xR + 2 * $s, $y + 3 * $s + 4, $t['net_caption']);
 
-        $this->drawIsoCube($pdf, $m + 4 * $s + 18, $y + 17, 13, $desc['faces']);
+        $isoX = $xR + 4 * $s + 18;
+        $this->drawIsoCube($pdf, $isoX, $y + 17, 13, $desc['faces']);
         $pdf->SetFont('Helvetica', '', 7);
         $pdf->SetTextColor(90, 90, 90);
-        $pdf->TextCentered($m + 4 * $s + 18, $y + 3 * $s + 4, $t['iso_caption']);
+        $pdf->TextCentered($isoX, $y + 3 * $s + 4, $t['iso_caption']);
 
-        $tx = $m + 4 * $s + 36;
         $steps = $params['pip_depth'] > 0 ? $t['steps_pips'] : $t['steps_blank_die'];
         if ($params['decor'] === 'blank') {
             $steps[] = $t['step_blank_labels'];
         }
         $pdf->SetTextColor(20, 20, 20);
         $pdf->SetFont('Helvetica', '', 8.5);
-        $pdf->SetXY($tx, $y - 2);
+        $pdf->SetXY($xR, $y + 3 * $s + 10);
         foreach ($steps as $n => $step) {
-            $pdf->SetX($tx);
+            $pdf->SetX($xR);
             $pdf->Cell(5, 4, ($n + 1) . '.');
-            $pdf->MultiCell($m + $contentW - $tx - 5, 4, LabelPdf::enc($step));
+            $pdf->MultiCell($wR - 5, 4, LabelPdf::enc($step));
             $pdf->Ln(1);
         }
 
         // --- Målestokk ---------------------------------------------------------
-        $this->drawRuler($pdf, $m, 272, $t);
+        $this->drawRuler($pdf, $m, $pageH - 18, $t);
 
         // --- Bunntekst ----------------------------------------------------------
         $pdf->SetFont('Helvetica', '', 6.5);
         $pdf->SetTextColor(130, 130, 130);
-        $pdf->TextUtf8($m, 290, strtr($t['footer'], [
+        $pdf->TextUtf8($m, $pageH - 7, strtr($t['footer'], [
             '{model}'   => $desc['model'],
             '{version}' => (string) $desc['version'],
             '{dims}'    => $dims,

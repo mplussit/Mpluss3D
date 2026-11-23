@@ -8,7 +8,7 @@ declare(strict_types=1);
  * akkurat som 2D-visningen i nettleseren. Målestokken er 1:1 når ikke noe
  * annet står tydelig på arket.
  *
- *   Ett ark      nettet i 1:1 (stående eller liggende A4)
+ *   Ett ark      nettet i 1:1 (liggende A4, dreid 90° når det trengs)
  *   Flere ark    oversikt (forminsket) + ett ark per del i 1:1, med overlapp,
  *                skjøtelinjer og passmerker
  *   Skalert      ett ark, tydelig merket med målestokken
@@ -42,7 +42,7 @@ final class SolidNetPdf
         $this->solid = $this->model->solid($p);
         ['net' => $this->net, 'plan' => $this->plan] = $this->model->net($p);
         $this->lines = $this->net->lines();
-        $this->pdf = new LabelPdf('P', 'A4');
+        $this->pdf = new LabelPdf('L', 'A4');
         $this->pdf->SetTitle(LabelPdf::enc($this->solid->name() . ' – utbrettingsfigur'));
         $this->pdf->SetCreator('M+ 3D');
 
@@ -79,15 +79,15 @@ final class SolidNetPdf
     {
         $plan = $this->plan;
         $pdf = $this->pdf;
-        $this->header('P', ['warn', sprintf('Oversikt – forminsket (%s). Ikke klipp ut denne siden. Arkene som følger er i 1:1.', $plan['overview']['label'])]);
-        $W = 190.0;
+        $this->header('L', ['warn', sprintf('Oversikt – forminsket (%s). Ikke klipp ut denne siden. Arkene som følger er i 1:1.', $plan['overview']['label'])]);
+        $W = 277.0;
         $text = sprintf(
             'Nettet er %s × %s mm og får ikke plass på ett A4-ark i målestokk 1:1. Det er delt på %d ark (%d %s × %d %s, %s). '
             . 'Nabo-arkene overlapper %s mm. Slik setter du dem sammen: Klipp hvert ark langs den blå heltrukne linja (skjøtekanten). '
             . 'Legg kanten over nabo-arket slik at den treffer den blå stiplede linja og passmerkene dekker hverandre. Tap eller lim, og klipp så ut nettet.',
             Solid::fmt($plan['size'][0], 0), Solid::fmt($plan['size'][1], 0), count($plan['pages']),
             $plan['rows'], $plan['rows'] === 1 ? 'rad' : 'rader', $plan['cols'], $plan['cols'] === 1 ? 'kolonne' : 'kolonner',
-            $plan['orientation'] === 'L' ? 'liggende' : 'stående', Solid::fmt(NetLayout::OVERLAP, 0)
+            'liggende', Solid::fmt(NetLayout::OVERLAP, 0)
         );
         $pdf->SetFont('Helvetica', '', 9.5);
         $pdf->SetTextColor(...self::INK);
@@ -115,7 +115,7 @@ final class SolidNetPdf
             $pdf->SetTextColor(...self::BLUE);
             $pdf->TextUtf8($wx * $s + $t[1] + 2, $wy * $s + $t[2] + 6, $tile['label']);
         }
-        $this->footer('P', false);
+        $this->footer('L', false);
     }
 
     private function tilePage(array $tile): void

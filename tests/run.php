@@ -468,13 +468,13 @@ echo "\nPDF\n";
 
 $k = 72 / 25.4;
 
-test('PDF er gyldig A4 stående (210 × 297 mm)', function () use ($model) {
+test('PDF er gyldig A4 liggende (297 × 210 mm)', function () use ($model) {
     $pdf = (new PdfGenerator($model))->render($model->validate([]));
     ok(str_starts_with($pdf, '%PDF-'));
     ok(str_contains($pdf, '%%EOF'));
     ok((bool) preg_match('/\/MediaBox \[0 0 ([\d.]+) ([\d.]+)\]/', $pdf, $m), 'MediaBox mangler');
-    near(210, $m[1] / (72 / 25.4), 0.05, 'bredde');
-    near(297, $m[2] / (72 / 25.4), 0.05, 'høyde');
+    near(297, $m[1] / (72 / 25.4), 0.05, 'bredde');
+    near(210, $m[2] / (72 / 25.4), 0.05, 'høyde');
 });
 
 test('PDF inneholder seks etiketter med eksakt størrelse', function () use ($model, $k) {
@@ -871,15 +871,15 @@ test('hel sirkel av to brøksett', function () {
     eq(12, 3 * $x + 2 * $y);
 });
 
-test('PDF: fire A4-sider (oppgavesidene liggende) for alle kombinasjoner, tekst innenfor arket', function () use ($frac, $combos, $k) {
+test('PDF: fire liggende A4-sider for alle kombinasjoner, tekst innenfor arket', function () use ($frac, $combos, $k) {
     foreach ($combos as $dens) {
         foreach ([50, 150] as $D) {
             $pdf = $frac->renderPdf($frac->validate(['denominators' => $dens, 'diameter' => $D]));
             ok(str_starts_with($pdf, '%PDF-'));
             $pages = pdfPages($pdf);
             eq(4, count($pages), json_encode($dens) . ' sider');
-            // Oversikt og arbeidsflate (1:1) er stående, oppgavesidene liggende.
-            eq(['P', 'L', 'L', 'P'], array_map(fn($p) => $p['w'] > $p['h'] ? 'L' : 'P', $pages), 'retning');
+            // Alle sidene er liggende, også oversikten og arbeidsflaten (1:1).
+            eq(['L', 'L', 'L', 'L'], array_map(fn($p) => $p['w'] > $p['h'] ? 'L' : 'P', $pages), 'retning');
             foreach ($pages as $i => $p) {
                 ok(!textOutside($p), json_encode($dens) . ' side ' . ($i + 1) . ': tekst utenfor arket ' . implode(' ', textOutside($p)));
             }
@@ -1252,7 +1252,7 @@ test('oppgavene passer til klossene i settet (alle sett)', function () use ($b10
     }
 });
 
-test('PDF: seks A4-sider (oppgavesidene liggende) for små og store sett, tekst innenfor arket', function () use ($b10, $b10Sets, $k) {
+test('PDF: seks liggende A4-sider for små og store sett, tekst innenfor arket', function () use ($b10, $b10Sets, $k) {
     foreach ($b10Sets as $in) {
         $pdf = $b10->renderPdf($b10->validate($in));
         ok(str_starts_with($pdf, '%PDF-'));
@@ -1261,11 +1261,10 @@ test('PDF: seks A4-sider (oppgavesidene liggende) for små og store sett, tekst 
         eq(6, count($pages));
         foreach ($pages as $i => $p) {
             ok(!textOutside($p), json_encode($in) . ' side ' . ($i + 1) . ': tekst utenfor arket ' . implode(' ', textOutside($p)));
-            // Oversikten er stående, oppgavesidene liggende.
-            eq($i === 0 ? 'P' : 'L', $p['w'] > $p['h'] ? 'L' : 'P', 'side ' . ($i + 1) . ' retning');
+            // Alle sidene er liggende, også oversikten.
+            eq('L', $p['w'] > $p['h'] ? 'L' : 'P', 'side ' . ($i + 1) . ' retning');
         }
-        // Side 6 er liggende
-        ok((bool) preg_match('/\/MediaBox \[0 0 841\.89 595\.28\]/', $pdf) || str_contains($pdf, '/Rotate'), 'side 6 skal være liggende');
+        ok((bool) preg_match('/\/MediaBox \[0 0 841\.89 595\.28\]/', $pdf), 'liggende A4');
     }
 });
 
@@ -1755,7 +1754,7 @@ test('brøk: bare brøker som kan vises nøyaktig, og helen kan byttes', functio
     ok($paper && $paper[0]['paper'], 'uten brøker: tegneoppgaver');
 });
 
-test('PDF: sju A4-sider (oppgavesidene liggende), tekst innenfor arket, for alle sett', function () use ($rods, $rodSets, $k) {
+test('PDF: sju liggende A4-sider, tekst innenfor arket, for alle sett', function () use ($rods, $rodSets, $k) {
     foreach ([...$rodSets, ['unit' => 20, 'grid' => 1, 'labels' => 1, 'color_mode' => 'single'], ['unit' => 6, 'color_mode' => 'custom', 'color_1' => '#000000']] as $in) {
         $pdf = $rods->renderPdf($rods->validate($in));
         ok(str_starts_with($pdf, '%PDF-'));
@@ -1764,8 +1763,8 @@ test('PDF: sju A4-sider (oppgavesidene liggende), tekst innenfor arket, for alle
         eq(7, count($pages));
         foreach ($pages as $i => $p) {
             ok(!textOutside($p), json_encode($in) . ' side ' . ($i + 1) . ': tekst utenfor arket ' . implode(' ', textOutside($p)));
-            // Oversikten er stående, oppgavesidene liggende.
-            eq($i === 0 ? 'P' : 'L', $p['w'] > $p['h'] ? 'L' : 'P', 'side ' . ($i + 1) . ' retning');
+            // Alle sidene er liggende, også lærerveiledningen.
+            eq('L', $p['w'] > $p['h'] ? 'L' : 'P', 'side ' . ($i + 1) . ' retning');
         }
     }
 });

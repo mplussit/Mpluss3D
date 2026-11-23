@@ -79,52 +79,61 @@ final class Base10PdfGenerator extends WorksheetPdf
         $pdf = $this->pdf;
         $p = $this->p;
         $parts = $this->model->parts($p);
-        $W = $this->contentW();
-        $y = $this->header(1, 'Base 10 – plassverdimateriell', orientation: 'P', tab: 'Oversikt', lead: sprintf(
+        $y = $this->header(1, 'Base 10 – plassverdimateriell', tab: 'Oversikt', lead: sprintf(
             'Klosser til 3D-printing som viser titallsystemet. Alle klossene er bygd av samme enhet (%s mm), '
             . 'så ti enere er like lange som en tier, ti tiere like store som en hundrer, og ti hundrere like store som en tusener.',
             Base10Model::fmt($p['unit'])
         ));
+        [[$xL, $W], [$xR, $wR]] = $this->twoColumns();
+        $top = $y;
 
-        // --- Illustrasjon: alle valgte klosser i riktig innbyrdes størrelse --
+        // --- Venstre spalte: alle valgte klosser i riktig innbyrdes størrelse --
+        $layout = function (float $s) use ($parts): array {
+            $items = [];
+            $totalW = 0.0;
+            foreach (array_reverse($parts) as $part) {
+                [$w, $h] = $this->blockSize($part['info']['type'], $s);
+                $items[] = [$part, $w, $h];
+                $totalW += max($w, 26);
+            }
+            return [$items, $totalW];
+        };
         $s = 3.0;
-        $items = [];
-        $totalW = 0.0;
-        foreach (array_reverse($parts) as $part) {
-            [$w, $h] = $this->blockSize($part['info']['type'], $s);
-            $items[] = [$part, $w, $h];
-            $totalW += max($w, 26);
+        [$items, $totalW] = $layout($s);
+        while ($s > 1.5 && ($totalW + 6 * (count($items) - 1) > $W || max(array_column($items, 2)) > 48)) {
+            $s -= 0.25;
+            [$items, $totalW] = $layout($s);
         }
-        $gap = count($items) > 1 ? min(14.0, ($W - $totalW) / (count($items) - 1)) : 0;
+        $gap = count($items) > 1 ? max(0.0, min(14.0, ($W - $totalW) / (count($items) - 1))) : 0;
         $maxH = max(array_column($items, 2));
-        $x = self::M + ($W - $totalW - $gap * (count($items) - 1)) / 2;
+        $x = $xL + ($W - $totalW - $gap * (count($items) - 1)) / 2;
         $base = $y + 2 + $maxH;
         foreach ($items as [$part, $w, $h]) {
             $i = $part['info'];
             $cell = max($w, 26);
             $this->drawBlock($x + ($cell - $w) / 2, $base, $i['type'], $s);
             $cx = $x + $cell / 2;
-            $pdf->SetFont('Helvetica', 'B', 10);
+            $pdf->SetFont('Helvetica', 'B', 9.5);
             $pdf->SetTextColor(...self::INK);
             $pdf->TextCentered($cx, $base + 6, ucfirst($i['name']) . '  ·  ' . $i['value']);
-            $pdf->SetFont('Helvetica', '', 8);
+            $pdf->SetFont('Helvetica', '', 7.5);
             $pdf->SetTextColor(...self::INK2);
             $pdf->TextCentered($cx, $base + 10, implode(' × ', array_map([Base10Model::class, 'fmt'], $i['size_mm'])) . ' mm');
             $x += $cell + $gap;
         }
         $y = $base + 17;
 
-        // --- Tabell: hva skal skrives ut ------------------------------------
-        $y = $this->subheading($y, 'Dette skal skrives ut') + 1.5;
-        $cols = [['Farge', 20], ['Objekt', 28], ['Verdi', 12], ['Mål (mm)', 28], ['STL-fil', 48], ['Antall', 20], ['Ca. PLA', 18]];
-        $rowH = 7.0;
+        // --- Tabell: hva skal skrives ut (fargen som en rute foran navnet) ----
+        $y = $this->subheadingAt($xL, $y, 'Dette skal skrives ut') + 1.5;
+        $cols = [['Objekt', 31], ['Verdi', 11], ['Mål (mm)', 24], ['STL-fil', 31], ['Antall', 15], ['PLA', 12.5]];
+        $rowH = 6.5;
         $pdf->SetFillColor(...self::SOFT);
-        $pdf->RectExact(self::M, $y, $W, $rowH, 'F');
-        $pdf->SetFont('Helvetica', 'B', 9);
+        $pdf->RectExact($xL, $y, $W, $rowH, 'F');
+        $pdf->SetFont('Helvetica', 'B', 8.5);
         $pdf->SetTextColor(...self::INK);
-        $x = self::M;
+        $x = $xL;
         foreach ($cols as [$label, $w]) {
-            $pdf->TextUtf8($x + 2, $y + 4.8, $label);
+            $pdf->TextUtf8($x + 1.5, $y + 4.5, $label);
             $x += $w;
         }
         $y += $rowH;
@@ -136,83 +145,48 @@ final class Base10PdfGenerator extends WorksheetPdf
             $pieces += $part['count'];
             $g = $part['count'] * $i['material']['print_g'];
             $grams += $g;
-            $x = self::M;
+            $x = $xL;
             $pdf->SetFillHex($i['color'], 0.35);
             $pdf->SetDrawHex($i['color']);
-            $pdf->RectExact($x + 2, $y + 1.6, 6, 3.8, 'FD');
-            $pdf->SetFont('Helvetica', '', 8);
-            $pdf->SetTextColor(...self::INK2);
-            $pdf->TextUtf8($x + 9.5, $y + 4.6, $i['color_name']);
-            $x += $cols[0][1];
-            $pdf->SetFont('Helvetica', 'B', 10);
+            $pdf->RectExact($x + 1.5, $y + 1.4, 5, 3.6, 'FD');
+            $pdf->SetFont('Helvetica', 'B', 8.5);
             $pdf->SetTextColor(...self::INK);
-            $pdf->TextUtf8($x + 2, $y + 4.8, ucfirst($i['name']) . ($i['hollow'] ? ' (hul)' : ''));
+            $pdf->TextUtf8($x + 8, $y + 4.4, ucfirst($i['name']) . ($i['hollow'] ? ' (hul)' : ''));
+            $x += $cols[0][1];
+            $pdf->SetFont('Helvetica', '', 8.5);
+            $pdf->TextUtf8($x + 1.5, $y + 4.4, (string) $i['value']);
             $x += $cols[1][1];
-            $pdf->SetFont('Helvetica', '', 9.5);
-            $pdf->TextUtf8($x + 2, $y + 4.8, (string) $i['value']);
+            $pdf->TextUtf8($x + 1.5, $y + 4.4, implode(' × ', array_map([Base10Model::class, 'fmt'], $i['size_mm'])));
             $x += $cols[2][1];
-            $pdf->TextUtf8($x + 2, $y + 4.8, implode(' × ', array_map([Base10Model::class, 'fmt'], $i['size_mm'])));
+            $pdf->SetFont('Courier', '', 7.5);
+            $pdf->TextUtf8($x + 1.5, $y + 4.4, $part['filename']);
             $x += $cols[3][1];
-            $pdf->SetFont('Courier', '', 9);
-            $pdf->TextUtf8($x + 2, $y + 4.8, $part['filename']);
+            $pdf->SetFont('Helvetica', 'B', 8.5);
+            $pdf->TextUtf8($x + 1.5, $y + 4.4, $part['count'] . ' stk');
             $x += $cols[4][1];
-            $pdf->SetFont('Helvetica', 'B', 10);
-            $pdf->TextUtf8($x + 2, $y + 4.8, $part['count'] . ' stk');
-            $x += $cols[5][1];
-            $pdf->SetFont('Helvetica', '', 9.5);
-            $pdf->TextUtf8($x + 2, $y + 4.8, Base10Model::grams($g));
+            $pdf->SetFont('Helvetica', '', 8.5);
+            $pdf->TextUtf8($x + 1.5, $y + 4.4, Base10Model::grams($g));
             $y += $rowH;
             $pdf->SetDrawColor(...self::RULE);
-            $pdf->LineExact(self::M, $y, self::M + $W, $y);
+            $pdf->LineExact($xL, $y, $xL + $W, $y);
         }
-        $pdf->SetFont('Helvetica', 'B', 10);
+        $pdf->SetFont('Helvetica', 'B', 9);
         $pdf->SetTextColor(...self::INK);
-        $pdf->TextUtf8(self::M + 2, $y + 5, 'Totalt');
-        $xCount = self::M + array_sum(array_column(array_slice($cols, 0, 5), 1));
-        $pdf->TextUtf8($xCount + 2, $y + 5, "$pieces stk");
-        $pdf->TextUtf8($xCount + $cols[5][1] + 2, $y + 5, Base10Model::grams($grams));
-        $y += 8;
+        $pdf->TextUtf8($xL + 1.5, $y + 4.6, 'Totalt');
+        $xCount = $xL + array_sum(array_column(array_slice($cols, 0, 4), 1));
+        $pdf->TextUtf8($xCount + 1.5, $y + 4.6, "$pieces stk");
+        $pdf->TextUtf8($xCount + $cols[4][1] + 1.5, $y + 4.6, Base10Model::grams($grams));
+        $y += 7.5;
         $pdf->SetFont('Helvetica', '', 8);
         $pdf->SetTextColor(...self::INK2);
-        $pdf->TextUtf8(self::M, $y + 1, sprintf(
+        $pdf->SetXY($xL - 1, $y);
+        $pdf->MultiCell($W + 2, 3.8, LabelPdf::enc(sprintf(
             'Filament er et overslag for PLA med 2 vegger og 15 %% fyll. Med settet kan elevene bygge alle tall opp til %d.',
             $this->tasks->largestCanonical()
-        ));
-        $y += 8;
+        )));
+        $y = $pdf->GetY() + 6;
 
-        // --- Plassverdisystemet --------------------------------------------
-        $y = $this->subheading($y, 'Plassverdisystemet');
-        $y = $this->paragraph($y, 'Verdien til et siffer avhenger av plassen det står på. I tallet 243 betyr 2 to hundrere, '
-            . '4 fire tiere og 3 tre enere: 243 = 200 + 40 + 3. Når vi har ti av en type, kan vi bytte dem mot én av '
-            . 'neste type. Det er dette klossene gjør synlig:') + 1.5;
-        $chain = ['10 enere = 1 tier', '10 tiere = 1 hundrer', '10 hundrere = 1 tusener'];
-        $pdf->SetFont('Helvetica', 'B', 9.5);
-        $pdf->SetTextColor(...self::INK);
-        $cw = $W / 3;
-        foreach ($chain as $k => $txt) {
-            $pdf->SetFillColor(...self::SOFT);
-            $pdf->RectExact(self::M + $k * $cw + ($k ? 1.5 : 0), $y, $cw - 1.5, 7, 'F');
-            $pdf->TextCentered(self::M + $k * $cw + $cw / 2 + ($k ? 0.75 : -0.75), $y + 4.7, $txt);
-        }
-        $y += 12;
-
-        // --- Slik kan materiellet brukes ------------------------------------
-        $y = $this->subheading($y, 'Slik kan materiellet brukes');
-        $tips = [
-            'Tell og grupper: Legg enere i grupper på ti og bytt hver gruppe mot en tier.',
-            'Bygg tall: Eleven bygger et tall med færrest mulig klosser og skriver hvor mange av hver type (side 2 og 3).',
-            'Veksle: Samme tall kan legges på flere måter, for eksempel 120 som 1 hundrer og 2 tiere eller som 12 tiere (side 4).',
-            'Regn: Legg begge tallene, slå sammen eller ta bort, og veksle når det trengs (side 5).',
-            'Plassverditabell: Legg klossene i riktig kolonne og skriv sifrene under (side 6).',
-        ];
-        foreach ($tips as $tip) {
-            $pdf->SetFillColor(243, 109, 33);
-            $pdf->RectExact(self::M + 0.5, $y + 1.6, 1.6, 1.6, 'F');
-            $y = $this->paragraph($y, $tip, 9.5, 4.6, self::M + 4, $W - 4) + 0.8;
-        }
-        $y += 6;
-
-        // --- Utskrift --------------------------------------------------------
+        // --- Teksten: høyre spalte (og under tabellen hvis det trengs) ------
         $print = 'Klossene ligger slik de skal skrives ut og trenger ikke støtte. Kantene mot byggeplaten har en liten fas i stedet for avrunding, '
             . 'så det ikke blir overheng. Anbefalt: PLA, 0,2 mm laghøyde, 2–3 vegger, 15 % fyll.';
         if (in_array('tusener', $p['types'], true)) {
@@ -220,11 +194,32 @@ final class Base10PdfGenerator extends WorksheetPdf
                 ? ' Den hule tusenerkuben skrives ut med den åpne siden opp (som en kopp), så den ikke trenger støtte eller lange broer. Snu den etter utskrift.'
                 : ' Den massive tusenerkuben bør skrives ut med lite fyll (10–15 %).';
         }
-        $h = 2.5 + $this->paragraphHeight($print, 9.5, 4.6, $W);
-        if ($y + $h <= $this->bottom()) {
-            $y = $this->subheading($y, 'Utskrift');
-            $this->paragraph($y, $print);
-        }
+        $chain = function (float $x, float $y, float $w) use ($pdf): void {
+            $pdf->SetFont('Helvetica', 'B', 8.5);
+            $pdf->SetTextColor(...self::INK);
+            $cw = $w / 3;
+            foreach (['10 enere = 1 tier', '10 tiere = 1 hundrer', '10 hundrere = 1 tusener'] as $k => $txt) {
+                $pdf->SetFillColor(...self::SOFT);
+                $pdf->RectExact($x + $k * $cw + ($k ? 1.5 : 0), $y, $cw - 1.5, 7, 'F');
+                $pdf->TextCentered($x + $k * $cw + $cw / 2 + ($k ? 0.75 : -0.75), $y + 4.7, $txt);
+            }
+        };
+        $this->flowText([
+            ['h', 'Plassverdisystemet'],
+            ['p', 'Verdien til et siffer avhenger av plassen det står på. I tallet 243 betyr 2 to hundrere, '
+                . '4 fire tiere og 3 tre enere: 243 = 200 + 40 + 3. Når vi har ti av en type, kan vi bytte dem mot én av '
+                . 'neste type. Det er dette klossene gjør synlig:', 1.5],
+            ['box', 7.0, $chain],
+            ['h', 'Slik kan materiellet brukes'],
+            ['li', 'Tell og grupper: Legg enere i grupper på ti og bytt hver gruppe mot en tier.'],
+            ['li', 'Bygg tall: Eleven bygger et tall med færrest mulig klosser og skriver hvor mange av hver type (side 2 og 3).'],
+            ['li', 'Veksle: Samme tall kan legges på flere måter, for eksempel 120 som 1 hundrer og 2 tiere eller som 12 tiere (side 4).'],
+            ['li', 'Regn: Legg begge tallene, slå sammen eller ta bort, og veksle når det trengs (side 5).'],
+            ['li', 'Plassverditabell: Legg klossene i riktig kolonne og skriv sifrene under (side 6).'],
+            ['gap', 4.2],
+            ['h', 'Utskrift'],
+            ['p', $print],
+        ], [[$xR, $top, $wR], [$xL, $y, $W]]);
         $this->footer();
     }
 

@@ -45,50 +45,47 @@ final class FractionPdfGenerator extends WorksheetPdf
         $pdf = $this->pdf;
         $parts = $this->model->parts($this->p);
         $W = $this->contentW();
-        $y = $this->header(1, 'Brøksirkler', orientation: 'P', tab: 'Oversikt', lead: sprintf(
+        $y = $this->header(1, 'Brøksirkler', tab: 'Oversikt', lead: sprintf(
             'Et sett med brøkbrikker til 3D-printing. Alle brikkene har samme diameter (%s mm), '
             . 'så brøker fra ulike sett kan sammenlignes direkte.',
             FractionModel::fmt($this->p['diameter'])
         ));
 
-        // --- Illustrasjon av settene ---------------------------------------
+        // --- Illustrasjon av settene, på én rad over hele bredden -------------
         $n = count($parts);
-        $perRow = min($n, 6);
-        $rows = (int) ceil($n / $perRow);
         $gap = 6.0;
-        $compact = $n > 6;                  // to rader: mindre sirkler og lavere tabellrader
-        $d = min($compact ? 18.0 : 26.0, ($W - ($perRow - 1) * $gap) / $perRow);
-        $cellW = ($W - ($perRow - 1) * $gap) / $perRow;
-        $y += 2;
+        $d = min(26.0, ($W - ($n - 1) * $gap) / $n * 0.8);
+        $cellW = min(44.0, ($W - ($n - 1) * $gap) / $n);
+        $x0 = self::M + ($W - ($n * $cellW + ($n - 1) * $gap)) / 2;
+        $y += 1;
         foreach ($parts as $i => $part) {
             $den = $part['info']['denominator'];
-            $col = $i % $perRow;
-            $row = intdiv($i, $perRow);
-            $rowCount = min($perRow, $n - $row * $perRow);
-            $x0 = self::M + ($W - ($rowCount * $cellW + ($rowCount - 1) * $gap)) / 2;
-            $cx = $x0 + $col * ($cellW + $gap) + $cellW / 2;
-            $cy = $y + $row * ($d + 16) + $d / 2;
+            $cx = $x0 + $i * ($cellW + $gap) + $cellW / 2;
+            $cy = $y + $d / 2;
             $this->drawCircle($cx, $cy, $d / 2, $den, $den, $part['info']['color']);
             $this->drawFraction($cx - $this->fracWidth(1, $den, 10) / 2, $cy + $d / 2 + 5.5, 1, $den, 10, false, $den === 1);
             $pdf->SetFont('Helvetica', '', 8);
             $pdf->SetTextColor(...self::INK2);
             $pdf->TextCentered($cx, $cy + $d / 2 + 13, $this->model->name($den, $den === 1 ? 0 : 1));
         }
-        $y += $rows * ($d + 16) + 4;
+        $y += $d + 21;
 
-        // --- Tabell: hva skal skrives ut ------------------------------------
+        [[$xL, $wL], [$xR, $wR]] = $this->twoColumns();
+        $top = $y;
+
+        // --- Venstre spalte: hva skal skrives ut -----------------------------
         $pdf->SetFont('Helvetica', 'B', 12);
         $pdf->SetTextColor(...self::INK);
-        $pdf->TextUtf8(self::M, $y, 'Dette skal skrives ut');
+        $pdf->TextUtf8($xL, $y, 'Dette skal skrives ut');
         $y += 4;
-        $cols = [['Farge', 22], ['Brøk', 18], ['Brikke', 34], ['STL-fil', 58], ['Antall', 42]];
-        $rowH = $compact ? 6.0 : 7.0;
+        $cols = [['Farge', 20], ['Brøk', 12], ['Brikke', 25], ['STL-fil', 37], ['Antall', 30.5]];
+        $rowH = $n > 8 ? 6.0 : 7.0;
         $pdf->SetFillColor(243, 239, 231);
-        $pdf->RectExact(self::M, $y, $W, $rowH, 'F');
-        $pdf->SetFont('Helvetica', 'B', 9);
-        $x = self::M;
+        $pdf->RectExact($xL, $y, $wL, $rowH, 'F');
+        $pdf->SetFont('Helvetica', 'B', 8.5);
+        $x = $xL;
         foreach ($cols as [$label, $w]) {
-            $pdf->TextUtf8($x + 2, $y + 4.8, $label);
+            $pdf->TextUtf8($x + 1.5, $y + $rowH / 2 + 1.5, $label);
             $x += $w;
         }
         $y += $rowH;
@@ -98,40 +95,38 @@ final class FractionPdfGenerator extends WorksheetPdf
         foreach ($parts as $part) {
             $info = $part['info'];
             $total += $part['count'];
-            $x = self::M;
+            $base = $y + $rowH / 2 + 1.4;
+            $x = $xL;
             $pdf->SetFillHex($info['color'], 0.35);
             $pdf->SetDrawHex($info['color']);
-            $pdf->RectExact($x + 2, $y + 1.6, 6, 3.8, 'FD');
-            $pdf->SetFont('Helvetica', '', 8);
+            $pdf->RectExact($x + 1.5, $base - 3.2, 5, 3.6, 'FD');
+            $pdf->SetFont('Helvetica', '', 7.5);
             $pdf->SetTextColor(...self::INK2);
-            $pdf->TextUtf8($x + 9.5, $y + 4.6, $info['color_name']);
+            $pdf->TextUtf8($x + 8, $base, $info['color_name']);
             $x += $cols[0][1];
-            $pdf->SetFont('Helvetica', 'B', 10);
+            $pdf->SetFont('Helvetica', 'B', 9.5);
             $pdf->SetTextColor(...self::INK);
-            $pdf->TextUtf8($x + 2, $y + 4.8, $info['fraction']);
+            $pdf->TextUtf8($x + 1.5, $base, $info['fraction']);
             $x += $cols[1][1];
-            $pdf->SetFont('Helvetica', '', 9.5);
-            $pdf->TextUtf8($x + 2, $y + 4.8, $info['name']);
+            $pdf->SetFont('Helvetica', '', 8.5);
+            $pdf->TextUtf8($x + 1.5, $base, $info['name']);
             $x += $cols[2][1];
-            $pdf->SetFont('Courier', '', 9);
-            $pdf->TextUtf8($x + 2, $y + 4.8, $part['filename']);
+            $pdf->SetFont('Courier', '', 7.5);
+            $pdf->TextUtf8($x + 1.5, $base, $part['filename']);
             $x += $cols[3][1];
-            $pdf->SetFont('Helvetica', 'B', 10);
-            $pdf->TextUtf8($x + 2, $y + 4.8, $part['count'] . ' ' . ($part['count'] === 1 ? 'eksemplar' : 'eksemplarer'));
+            $pdf->SetFont('Helvetica', 'B', 8.5);
+            $pdf->TextUtf8($x + 1.5, $base, $part['count'] . ' ' . ($part['count'] === 1 ? 'eksemplar' : 'eksemplarer'));
             $y += $rowH;
             $pdf->SetDrawColor(217, 210, 196);
-            $pdf->LineExact(self::M, $y, self::M + $W, $y);
+            $pdf->LineExact($xL, $y, $xL + $wL, $y);
         }
-        $pdf->SetFont('Helvetica', 'B', 10);
-        $pdf->TextUtf8(self::M + 2, $y + 5, 'Totalt');
-        $pdf->TextUtf8(self::M + $W - $cols[4][1] + 2, $y + 5, "$total brikker");
+        $pdf->SetFont('Helvetica', 'B', 9.5);
+        $pdf->TextUtf8($xL + 1.5, $y + 5, 'Totalt');
+        $pdf->TextUtf8($xL + $wL - $cols[4][1] + 1.5, $y + 5, "$total brikker");
         $y += 13;
 
-        // --- Til læreren ----------------------------------------------------
-        $pdf->SetFont('Helvetica', 'B', 12);
-        $pdf->SetTextColor(...self::INK);
-        $pdf->TextUtf8(self::M, $y, 'Til læreren');
-        $y += 2.5;
+        // --- Til læreren og innstillingene: høyre spalte ----------------------
+        $blocks = [['h', 'Til læreren']];
         $paras = [
             'Hver STL-fil er én brikke. Skriv ut fila så mange ganger som står under «Antall». '
             . 'Bruk gjerne én filamentfarge per brøksett, for eksempel fargene i tabellen. Da blir settene lette å skille fra hverandre.',
@@ -147,32 +142,29 @@ final class FractionPdfGenerator extends WorksheetPdf
         foreach ($this->model->warnings($this->p) as $w) {
             $paras[] = $w;
         }
-        $pdf->SetFont('Helvetica', '', $compact ? 9.0 : 9.5);
-        $pdf->SetTextColor(...self::INK);
-        $lineH = $compact ? 4.3 : 4.6;
         foreach ($paras as $para) {
-            $pdf->SetXY(self::M - 1, $y);
-            $pdf->MultiCell($W + 2, $lineH, LabelPdf::enc($para));
-            $y = $pdf->GetY() + 1.4;
+            $blocks[] = ['p', $para, 1.4];
         }
-
-        // --- Innstillinger (står også i bunnteksten, så den kan droppes ved plassmangel)
-        $y += 2;
-        if ($y + 15 > $this->bottom()) {
-            $this->footer();
-            return;
-        }
-        $pdf->SetFillColor(243, 239, 231);
-        $pdf->RectExact(self::M, $y, $W, 15, 'F');
-        $pdf->SetFont('Helvetica', 'B', 9);
-        $pdf->TextUtf8(self::M + 4, $y + 6, 'Innstillinger');
-        $pdf->SetFont('Helvetica', '', 9);
-        $pdf->TextUtf8(self::M + 4, $y + 11, sprintf(
-            'Diameter %s mm  ·  tykkelse %s mm  ·  klaring %s mm  ·  kantavrunding %s mm  ·  merking: %s',
-            FractionModel::fmt($this->p['diameter']), FractionModel::fmt($this->p['thickness']),
-            FractionModel::fmt($this->p['clearance']), FractionModel::fmt($this->p['edge_radius']),
-            $this->p['labels'] ? 'nedsenket' : 'ingen'
-        ));
+        $blocks[] = ['gap', 2.6];
+        // Innstillingene står også i bunnteksten, så boksen kan utelates ved plassmangel.
+        $blocks[] = ['box', 19.0, function (float $x, float $y, float $w) use ($pdf): void {
+            $pdf->SetFillColor(243, 239, 231);
+            $pdf->RectExact($x, $y, $w, 19, 'F');
+            $pdf->SetFont('Helvetica', 'B', 9);
+            $pdf->SetTextColor(...self::INK);
+            $pdf->TextUtf8($x + 4, $y + 6, 'Innstillinger');
+            $pdf->SetFont('Helvetica', '', 8.5);
+            $pdf->TextUtf8($x + 4, $y + 11, sprintf(
+                'Diameter %s mm  ·  tykkelse %s mm  ·  klaring %s mm',
+                FractionModel::fmt($this->p['diameter']), FractionModel::fmt($this->p['thickness']),
+                FractionModel::fmt($this->p['clearance'])
+            ));
+            $pdf->TextUtf8($x + 4, $y + 15.5, sprintf(
+                'Kantavrunding %s mm  ·  merking: %s',
+                FractionModel::fmt($this->p['edge_radius']), $this->p['labels'] ? 'nedsenket' : 'ingen'
+            ));
+        }];
+        $this->flowText($blocks, [[$xR, $top, $wR], [$xL, $y, $wL]]);
         $this->footer();
     }
 
@@ -239,68 +231,75 @@ final class FractionPdfGenerator extends WorksheetPdf
     private function pageWorksheet(): void
     {
         $pdf = $this->pdf;
-        $y = $this->header(4, 'Arbeidsflate',
-            'Legg brikkene på sirklene. Skriv brøkuttrykket du har laget på linjene, for eksempel 1/4 + 1/4 = 1/2.', 'P');
+        $lead = 'Legg brikkene på sirklene. Skriv brøkuttrykket du har laget på linjene, for eksempel 1/4 + 1/4 = 1/2.';
+        $help = 'Linjalen skal være nøyaktig 100 mm. Hvis ikke: skriv ut på nytt med «Faktisk størrelse» / 100 %, ikke «Tilpass til side».';
         $W = $this->contentW();
         $D = (float) $this->p['diameter'];
-        $top = $y + 2;
-        $bottom = 262.0;                       // over linjalen
-        $availH = $bottom - $top;
+        $rulerY = $this->bottom() - 4;
 
-        $linesW = 64.0;
-        $side = $D + 10 + $linesW <= $W;       // linjer ved siden av sirkelen
-        $cellH = $side ? $D + 8 : $D + 30;
-        $scale = min(1.0, $W / $D, ($availH - ($side ? 0 : 22)) / $D);
-        if ($scale < 1.0) {
-            $side = false;
-            $cellH = $D * $scale + 30;
-        }
-        $Ds = $D * $scale;
-        $rows = max(1, (int) floor(($availH + 8) / $cellH));
-
-        if ($scale < 1.0) {
-            $pdf->SetFillColor(255, 243, 205);
-            $pdf->SetDrawColor(230, 180, 60);
-            $pdf->RectExact(self::M, $top, $W, 9, 'FD');
-            $pdf->SetFont('Helvetica', 'B', 9);
-            $pdf->SetTextColor(...self::INK);
-            $pdf->TextUtf8(self::M + 3, $top + 5.8, sprintf(
-                'Merk: Sirklene på denne siden er skalert til %d %% fordi diameteren (%s mm) er for stor for A4.',
-                (int) floor($scale * 100), FractionModel::fmt($D)
-            ));
-            $top += 13;
-        }
-
-        for ($i = 0; $i < $rows; $i++) {
-            $y0 = $top + $i * $cellH;
-            $cx = $side ? self::M + $Ds / 2 : self::M + $W / 2;
-            $cy = $y0 + $Ds / 2;
-            $pdf->SetDrawColor(...self::INK);
-            $pdf->SetLineWidth(0.35);
-            $pdf->Circle($cx, $cy, $Ds / 2, 'D');
-            $pdf->SetLineWidth(0.2);
-            $pdf->LineExact($cx - 2, $cy, $cx + 2, $cy);
-            $pdf->LineExact($cx, $cy - 2, $cx, $cy + 2);
-
-            $pdf->SetDrawColor(180, 174, 162);
-            $pdf->SetLineWidth(0.25);
-            if ($side) {
-                $lx = self::M + $Ds + 10;
-                $n = max(2, min(5, (int) floor($Ds / 12)));
-                $step = $Ds / ($n + 1);
-                for ($j = 1; $j <= $n; $j++) {
-                    $pdf->LineExact($lx, $y0 + $j * $step + 4, self::M + $W, $y0 + $j * $step + 4);
-                }
-            } else {
-                foreach ([10, 20] as $dy) {
-                    $pdf->LineExact(self::M + 10, $cy + $Ds / 2 + $dy, self::M + $W - 10, $cy + $Ds / 2 + $dy);
+        // Sirkler i full størrelse ved siden av hverandre, med skrivelinjer under.
+        $cellH = $D + 22;
+        if ($cellH <= $rulerY - 12 - 45) {
+            $y = $this->header(4, 'Arbeidsflate', $lead);
+            $top = $y + 2;
+            $avail = $rulerY - 12 - $top;
+            $n = max(1, (int) floor(($W + 14) / ($D + 14)));
+            $rows = max(1, (int) floor(($avail + 8) / ($cellH + 8)));
+            $gapX = $n > 1 ? min(30.0, ($W - $n * $D) / ($n - 1)) : 0;
+            $x0 = self::M + ($W - $n * $D - ($n - 1) * $gapX) / 2;
+            $gapY = $rows > 1 ? ($avail - $rows * $cellH) / ($rows - 1) : 0;
+            for ($r = 0; $r < $rows; $r++) {
+                for ($c = 0; $c < $n; $c++) {
+                    $cx = $x0 + $c * ($D + $gapX) + $D / 2;
+                    $cy = $top + $r * ($cellH + $gapY) + $D / 2;
+                    $this->worksheetCircle($cx, $cy, $D);
+                    $pdf->SetDrawColor(180, 174, 162);
+                    $pdf->SetLineWidth(0.25);
+                    foreach ([10, 20] as $dy) {
+                        $pdf->LineExact($cx - $D / 2, $cy + $D / 2 + $dy, $cx + $D / 2, $cy + $D / 2 + $dy);
+                    }
                 }
             }
+            $pdf->Ruler100(self::M, $rulerY, 'Kontroller utskriften', $help);
+            $this->footer();
+            return;
         }
 
-        $pdf->Ruler100(self::M, 272, 'Kontroller utskriften',
-            'Linjalen skal være nøyaktig 100 mm. Hvis ikke: skriv ut på nytt med «Faktisk størrelse» / 100 %, ikke «Tilpass til side».');
+        // Store sirkler: én sirkel helt til venstre (fra like under tittelen),
+        // og teksten, skrivelinjene og linjalen i et felt til høyre.
+        $this->header(4, 'Arbeidsflate', '');
+        $top = 33.0;
+        $panelMin = 100.0;
+        $scale = min(1.0, ($this->pageH() - 9 - $top) / $D, ($W - $panelMin - 10) / $D);
+        $Ds = $D * $scale;
+        $this->worksheetCircle(self::M + $Ds / 2, $top + $Ds / 2, $Ds);
+        $px = self::M + $Ds + 10;
+        $pw = $W - $Ds - 10;
+        $y = $this->paragraph($top + 3, $lead, 9.5, 4.6, $px, $pw) + 3;
+        if ($scale < 1.0) {
+            $y = $this->paragraph($y, sprintf('Merk: Sirkelen er skalert til %d %% fordi diameteren (%s mm) er for stor for A4.',
+                (int) floor($scale * 100), FractionModel::fmt($D)), 9, 4.4, $px, $pw) + 3;
+        }
+        $pdf->SetDrawColor(180, 174, 162);
+        $pdf->SetLineWidth(0.25);
+        $rulerY = $this->pageH() - 14;
+        for ($ly = $y + 12; $ly <= $rulerY - 24; $ly += 12) {
+            $pdf->LineExact($px, $ly, $px + $pw, $ly);
+        }
+        $pdf->Ruler100($px, $rulerY, 'Kontroller utskriften', $help, true);
         $this->footer();
+    }
+
+    /** Sirkelen på arbeidsflaten, med et lite kryss i sentrum. */
+    private function worksheetCircle(float $cx, float $cy, float $d): void
+    {
+        $pdf = $this->pdf;
+        $pdf->SetDrawColor(...self::INK);
+        $pdf->SetLineWidth(0.35);
+        $pdf->Circle($cx, $cy, $d / 2, 'D');
+        $pdf->SetLineWidth(0.2);
+        $pdf->LineExact($cx - 2, $cy, $cx + 2, $cy);
+        $pdf->LineExact($cx, $cy - 2, $cx, $cy + 2);
     }
 
     /* ======================================================= Felles tegning */

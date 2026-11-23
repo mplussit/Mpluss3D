@@ -143,8 +143,11 @@ final class LabelPdf extends FPDF
         return array_map(fn($v) => (int) round($v + (255 - $v) * $tint), $c);
     }
 
-    /** Linjal på nøyaktig 100 mm med mm-inndeling. (x, y) er venstre ende av grunnlinja. */
-    public function Ruler100(float $x, float $y, string $caption, string $help): void
+    /**
+     * Linjal på nøyaktig 100 mm med mm-inndeling. (x, y) er venstre ende av grunnlinja.
+     * Teksten står til høyre for linjalen (174 mm i alt), eller over den med $above (100 mm bred).
+     */
+    public function Ruler100(float $x, float $y, string $caption, string $help, bool $above = false): void
     {
         $this->SetDrawColor(0, 0, 0);
         $this->SetLineWidth(0.2);
@@ -160,6 +163,13 @@ final class LabelPdf extends FPDF
             $this->TextCentered($x + $mm, $y + 3, (string) $mm);
         }
         $this->SetFont('Helvetica', 'B', 9);
+        if ($above) {
+            $this->TextUtf8($x, $y - 15, $caption);
+            $this->SetFont('Helvetica', '', 7);
+            $this->SetXY($x - 1, $y - 13.5);
+            $this->MultiCell(102, 3.2, self::enc($help));
+            return;
+        }
         $this->TextUtf8($x + 106, $y - 1.5, $caption);
         $this->SetFont('Helvetica', '', 7);
         $this->SetXY($x + 106, $y);
@@ -215,6 +225,31 @@ final class LabelPdf extends FPDF
     }
 
     /** Klipper alt som tegnes til rektangelet, til ClipEnd(). */
+    /**
+     * Tegner i et eget koordinatsystem til EndTransform(): et punkt (x, y) i mm
+     * havner i (a·x + c·y + e, b·x + d·y + f) på siden, som SVG-ens
+     * transform="matrix(a b c d e f)" (y nedover).
+     * @param array{float,float,float,float,float,float} $m
+     */
+    public function StartTransform(array $m): void
+    {
+        [$a, $b, $c, $d, $e, $f] = $m;
+        $k = $this->k;
+        $H = $this->h;
+        // Fra mm med y nedover til punkter med y oppover på begge sider av avbildningen.
+        $this->_out(sprintf('q %.5F %.5F %.5F %.5F %.5F %.5F cm',
+            $a, -$b, -$c, $d, $k * ($e + $c * $H), $k * ($H - $f - $d * $H)));
+    }
+
+    public function EndTransform(): void
+    {
+        $this->_out('Q');
+        // Q setter skrift og farger tilbake i PDF-en; FPDF må sette skriften på nytt neste gang.
+        $this->FontFamily = '';
+        $this->FontStyle = '';
+        $this->FontSizePt = 0;
+    }
+
     public function ClipRect(float $x, float $y, float $w, float $h): void
     {
         $this->_out(sprintf('q %.3F %.3F %.3F %.3F re W n', $x * $this->k, ($this->h - $y) * $this->k, $w * $this->k, -$h * $this->k));

@@ -145,7 +145,7 @@ mplus-3d/
 │       └── fonts/LiberationSans-Bold.ttf  Font til brøkmerkingen og tallstavene (SIL OFL)
 ├── templates/
 │   ├── pages/                      HTML for menyen og hver modellside
-│   └── dice-labels/a4-portrait.php Tekster og layout for terning-PDF-en
+│   └── dice-labels/a4-landscape.php Tekster og layout for terning-PDF-en
 ├── storage/                        Genererte filer, hurtigbuffer, låser, logger (skrivbar)
 ├── bin/
 │   ├── generate.php                Lag en modell fra kommandolinjen
@@ -206,9 +206,18 @@ M+ 3D er også et produkt i produktvelgeren i M+ (fag `3d`, fra `menu__24.js` i 
 * **PDF-knappen og oppsamlings-PDF** (`public/js/collect.js`, som i M+ matematikk). PDF-knappen i toppfeltet åpner en dialog med sidene i PDF-fanene som avkrysningsbokser. «Lag PDF» laster ned de valgte sidene direkte. «Legg til i oppsamlings-PDF» kopierer dem ut med pdf-lib (fra jsDelivr) og lagrer dem i nettleseren (IndexedDB, databasen `mplus3d`), så læreren kan gå til en annen modell og legge til flere sider. Tallet på knappen viser hvor mange sider som er samlet. «Lag oppsamlings-PDF» slår alt sammen til én fil og tømmer oppsamlingen. «Merk ark med» skriver en tekst langs høyre kant på hver side, og filnavnet kan endres. Alt skjer i nettleseren, serveren lager bare de vanlige PDF-ene. De vanlige «Last ned PDF»-knappene i panelet virker som før.
 * En ny modellside trenger `<nav id="sheet-tabs" class="sheet-tabs"></nav>` øverst i `.viewer-wrap` og et kall til `initSheets()` i sidens skript, med `sheets.refresh()` etter hver endring.
 
-### Liggende oppgaveark
+### Liggende ark
 
-Oppgavesidene er liggende A4, som i M+ matematikk. `WorksheetPdf::header()` lager liggende sider som standard, og `drawSections()` fordeler oppgavene i to spalter. Lærerveiledningene (side 1), sider i målestokk 1:1 (arbeidsflate, etiketter, utbrettingsnett, hullarket i kulespillet og terningdekoren) er stående. I kulespillet er verdiark, oppgaver og fasit liggende med to spalter.
+Alle sidene i alle PDF-ene er liggende A4, som i M+ matematikk.
+
+* **Oppgavesidene:** `WorksheetPdf::header()` lager liggende sider, og `drawSections()` fordeler oppgavene i to spalter.
+* **Lærerveiledningene og oversiktene** (side 1) har to spalter: tabellen over det som skal skrives ut til venstre, og teksten til høyre. `WorksheetPdf::flowText()` fordeler overskrifter, avsnitt og kulepunkter i spaltene og fortsetter i neste spalte når det ikke er plass. Brøksirklene har illustrasjonen av settene over begge spaltene. I Regn med Lego står rammene i to spalter.
+* **Sider i målestokk 1:1** er også liggende:
+  * Arbeidsflaten for brøksirkler har sirklene ved siden av hverandre, med skrivelinjer under (to sirkler med 100 mm diameter). Er sirklene større enn ca. 105 mm, står én sirkel til venstre og linjene og linjalen til høyre. Da får også 150 mm plass i 1:1.
+  * Lego-etikettene og terningdekoren bruker hele bredden. Terningdekoren har etikettene til venstre og monteringen til høyre (`templates/dice-labels/a4-landscape.php`).
+  * Utbrettingsnettet prøver bare liggende ark (`NetLayout::ORIENTATIONS`). Et høyt nett dreies 90°, fordi rotasjonene er egne nettvarianter. Store nett kan trenge flere ark enn på stående A4.
+  * Hullarket i kulespillet (160 × 250 mm) er dreid 90° med toppen mot venstre (se «Kulespill»).
+* I kulespillet er verdiark, oppgaver og fasit liggende med to spalter.
 
 ## Serveravhengigheter
 
@@ -343,7 +352,7 @@ Etikettstørrelsen er `auto` som standard: den flate delen av siden (`størrelse
 
 Koordinater skrives med tre desimaler i punkter (±0,0004 mm). Testene kontrollerer at etikettene har eksakt størrelse og at målestokken er nøyaktig 100 mm.
 
-Tekster og layoutkonstanter ligger i `templates/dice-labels/a4-portrait.php`. Senere kan bilder, symboler og tekst fra M+ legges inn i `PdfGenerator::drawContent()`.
+Tekster og layoutkonstanter ligger i `templates/dice-labels/a4-landscape.php`. Senere kan bilder, symboler og tekst fra M+ legges inn i `PdfGenerator::drawContent()`.
 
 ## Koordinatsystem og orientering
 
@@ -700,7 +709,7 @@ For sylinder og kjegle følger tellingen vanlig skolegeometri. Den krumme sidefl
 * Den trykte siden blir utsiden. Alt brettes bakover, og limflikene havner på innsiden.
 * **Limfliker** (standard 7 mm) har skrå hjørner. Det er én flik per kant som skal limes, og aldri to mot hverandre. Sylinderen har limtenner langs rektangelets lange kanter, og kjeglen langs sektorens bue. Der sirklene limes på. Kjeglens og viftepyramidens flik ved spissen spisses til så den holder seg i åpningen. Flikene ligger utenfor flatene og endrer ikke målene.
 * **Store nett** (`NetLayout`):
-  1. Første nettvariant som får plass på ett A4-ark i 1:1, stående eller liggende.
+  1. Første nettvariant som får plass på ett liggende A4-ark i 1:1 (en variant kan være dreid 90°).
   2. Andre varianter og rotasjoner: tre kors og tre rekker for prismet, stjerne og vifte for pyramiden, sektoren rotert i trinn på 15° for kjeglen, og ulik plassering av sirklene for sylinderen.
   3. Får nettet fortsatt ikke plass, deles det på flere ark i 1:1 (færrest mulig). Først kommer en tydelig merket, forminsket oversikt med arkene (A1, A2 …). Hvert ark har 12 mm overlapp, en heltrukken skjøtekant («Klipp her og legg over A1»), en stiplet linje der neste ark skal ligge, passmerker og et lite kart over arkene.
   4. Alternativt (`net_print=scaled`): ett ark, forminsket til en pen målestokk (1 : 1,25, 1 : 1,5, 1 : 2 …), merket i rødt med «SKALERT – målestokk 1 : x. Ikke 1:1: papirfiguren blir mindre enn 3D-modellen.»
@@ -839,11 +848,11 @@ Læreren velger:
 * **Sett:** 1–10 sett med ulike verdier. Med tall og regnestykker får hvert sett sitt eget hullark. Med bokstaver og symboler er hullarket det samme for alle, og settene har hvert sitt verdiark og oppgaveark.
 * **Lag stykker** gir et nytt tilfeldig frø (`seed`). Alt innhold lages deterministisk av frøet (`MarbleRandom`, xorshift32), så samme valg gir alltid de samme arkene.
 
-**Hullarket** er A4 i 1:1. Arket på 160 × 250 mm ligger midt på siden med hjørnemerker, omrisset av den runde toppen og en kontrollinje på 100 mm. Innholdet står midt over hvert hull, innenfor Ø17 mm. Alle hullene på et ark har samme tekststørrelse: den største som får plass i alle.
+**Hullarket** er liggende A4 i 1:1. Arket på 160 × 250 mm er dreid 90° med toppen mot venstre, og har hjørnemerker, omrisset av den runde toppen og en kontrollinje på 100 mm. Selve arket er en `group` med en transformasjon (`MarbleSheets::sheetMatrix()`). Inne i gruppen har elementene arkets egne koordinater (`toSheet()`, `SHEET_X`, `SHEET_Y`), så 3D-teksturen bruker dem uten å dreie noe. Innholdet står midt over hvert hull, innenfor Ø17 mm. Alle hullene på et ark har samme tekststørrelse: den største som får plass i alle.
 
 ### Forhåndsvisning = PDF
 
-`MarbleSheets` legger ut alle sidene som enkle tegneelementer i mm (rektangel, linje, sirkel, mangekant, tekst med størrelse og justering). Tekstbredder måles med FPDFs Helvetica-metrikk. `MarblePdf` tegner elementene i PDF-en, og PDF-fanene viser den samme PDF-en (se «Toppfelt, arkfaner og forhåndsvisning av PDF-en»). Hullarket er stående; verdiark, oppgaver og fasit er liggende med to spalter. Minus skrives som tankestrek (–), som har samme bredde som sifrene og finnes i PDF-fontene.
+`MarbleSheets` legger ut alle sidene som enkle tegneelementer i mm (rektangel, linje, sirkel, mangekant, tekst med størrelse og justering). Tekstbredder måles med FPDFs Helvetica-metrikk. `MarblePdf` tegner elementene i PDF-en, og PDF-fanene viser den samme PDF-en (se «Toppfelt, arkfaner og forhåndsvisning av PDF-en»). Alle sidene er liggende. Verdiark, oppgaver og fasit har to spalter. Elementtypen `group` (med `m` = [a, b, c, d, e, f] som i SVG-ens `matrix()`) tegnes med `LabelPdf::StartTransform()` i PDF-en og som `<g transform>` i `sheet-svg.js`. Minus skrives som tankestrek (–), som har samme bredde som sifrene og finnes i PDF-fontene.
 
 I **3D-visningen** står spillet på bunnen, og hullarket for siden som er valgt, er lagt som tekstur på arket. «Løft spillet og se arket» løfter spillet 45 mm.
 
