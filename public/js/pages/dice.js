@@ -36,6 +36,7 @@ let debounceTimer;
 const sheets = initSheets({
     threeD: { label: 'Terningen' },
     docs: [{ key: 'pdf', request: () => ({ url: `${API}?${pdfQuery()}` }) }],
+    stl: () => state.current?.parts ?? [],
 });
 
 init().catch((err) => showMessage('Kunne ikke starte appen: ' + err.message));

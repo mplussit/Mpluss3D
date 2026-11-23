@@ -18,11 +18,13 @@
  *   const sheets = initSheets({
  *       threeD: { group: '#mode-options', label: 'Klossene' },   // eller bare label
  *       docs: [{ key: 'pdf', request: () => ({ url, body }) }],
+ *       stl: () => state.current?.parts ?? [],   // til 3MF-byggeplaten (plate.js)
  *   });
  *   sheets.refresh();   // etter hver endring i innstillingene
  */
 import * as pdfjs from 'pdfjs-dist';
 import { initCollect } from './collect.js';
+import { initPlate } from './plate.js';
 
 pdfjs.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@6.2.108/build/pdf.worker.min.mjs';
 
@@ -40,7 +42,9 @@ const ICONS = {
         + ' font-weight="700" fill="currentColor">PDF</text></svg>',
 };
 
-export function initSheets({ threeD = {}, docs = [] }) {
+export function initSheets({ threeD = {}, docs = [], stl = () => [] }) {
+    // 3MF-knappen: STL-filene på siden kan legges på byggeplaten.
+    initPlate(stl);
     const wrap = document.querySelector('.viewer-wrap');
     const bar = document.getElementById('sheet-tabs');
     // Fanene står i hele bredden rett under toppfeltet.

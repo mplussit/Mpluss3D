@@ -39,6 +39,7 @@ let setActiveView = () => {};
 const sheets = initSheets({
     threeD: { group: '#show-options' },
     docs: [{ key: 'pdf', request: () => ({ url: `${API}?action=pdf&model=${MODEL}`, body: requestBody() }) }],
+    stl: () => state.current?.parts ?? [],
 });
 
 init().catch((err) => showMessage('Kunne ikke starte appen: ' + err.message));

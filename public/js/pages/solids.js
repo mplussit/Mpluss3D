@@ -46,6 +46,7 @@ const sheets = initSheets({
         { key: 'net', request: () => ({ url: `${API}?${query('pdf', 'net')}` }) },
         { key: 'tasks', request: () => ({ url: `${API}?${query('pdf', 'tasks')}` }) },
     ],
+    stl: () => state.current?.parts ?? [],
 });
 
 init().catch((err) => showMessage('Kunne ikke starte appen: ' + err.message));

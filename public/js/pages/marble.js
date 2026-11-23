@@ -41,6 +41,15 @@ let debounceTimer;
 const sheets = initSheets({
     threeD: { label: 'Kulespillet' },
     docs: [{ key: 'pdf', request: () => ({ url: `${API}?action=pdf&model=${MODEL}`, body: requestBody() }) }],
+    stl: () => {
+        if (!state.schema) return [];
+        const board = boardFile();
+        const base = state.schema.files.base;
+        return [
+            { stl_url: board.path, filename: board.filename, count: 1, label: `Kulespill ${state.values.layout}` },
+            { stl_url: base.path, filename: base.filename, count: 1, label: base.label },
+        ];
+    },
 });
 
 init().catch((err) => showMessage('Kunne ikke starte appen: ' + err.message));

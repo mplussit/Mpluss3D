@@ -36,6 +36,7 @@ let debounceTimer;
 const sheets = initSheets({
     threeD: { group: '#mode-options' },
     docs: [{ key: 'pdf', request: () => ({ url: `${API}?${query('pdf')}` }) }],
+    stl: () => state.current?.parts ?? [],
 });
 
 init().catch((err) => showMessage('Kunne ikke starte appen: ' + err.message));
