@@ -50,8 +50,8 @@ return [
         ? array_values(array_filter(array_map('trim', explode(',', (string) getenv('MPLUS_RETURN_HOSTS')))))
         : ['app.mpluss.no', 'apptest.mpluss.no', 'test.mpluss.no', 'localhost', '127.0.0.1'],
 
-    // Hjelp-knappen øverst til høyre lenker hit (sidene på nettstedet om STL og PDF).
-    // På modellsidene legges #side til (f.eks. #base10), så hjelpesiden kan ha et
-    // avsnitt per modell. Kan overstyres med M3D_HELP_URL.
-    'help_url' => getenv('M3D_HELP_URL') !== false ? (string) getenv('M3D_HELP_URL') : 'https://mpluss.no/3d-hjelp/',
+    // Hjelp-knappen øverst til høyre lenker hit (public/hjelp/: hvordan 3MF- og
+    // PDF-filene lages og brukes). På modellsidene legges #side til (f.eks. #base10),
+    // så hjelpesiden åpnes ved avsnittet om modellen. Kan overstyres med M3D_HELP_URL.
+    'help_url' => getenv('M3D_HELP_URL') !== false ? (string) getenv('M3D_HELP_URL') : 'hjelp/',
 ];

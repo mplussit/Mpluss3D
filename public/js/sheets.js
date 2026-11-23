@@ -58,7 +58,7 @@ export function initSheets({ threeD = {}, docs = [], stl = () => [] }) {
             <label><input type="radio" name="sheet-variant" value="fasit"> Fasit</label>
         </div>
         <div class="sheet-stage"><canvas class="sheet-canvas" role="img"></canvas><p class="sheet-note" role="status" hidden></p></div>
-        <p class="hint sheet-hint">Forhåndsvisningen er den samme PDF-en som du laster ned.</p>`;
+        <p class="hint sheet-hint">Forhåndsvisningen er den samme PDF-en som du får med PDF-knappen øverst.</p>`;
     wrap.querySelector('.viewer-surface').after(pane);
     const stage = pane.querySelector('.sheet-stage');
     const canvas = pane.querySelector('canvas');
@@ -245,7 +245,7 @@ export function initSheets({ threeD = {}, docs = [], stl = () => [] }) {
         const showFasit = state.fasit && page.answer;
         hint.textContent = showFasit
             ? 'Fasiten er de samme sidene med svarene fylt inn. Last den ned med PDF-knappen øverst.'
-            : 'Forhåndsvisningen er den samme PDF-en som du laster ned.';
+            : 'Forhåndsvisningen er den samme PDF-en som du får med PDF-knappen øverst.';
         if (showFasit && !d.fasit) return showNote('Lager fasiten …');
         const pdfPage = await (showFasit ? d.fasit.doc : d.doc).getPage(page.page);
         const zoom = window.m3dScale?.get() ?? 1;

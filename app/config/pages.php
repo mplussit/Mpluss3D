@@ -30,7 +30,7 @@ return [
             'group'       => 'konkreter',
             'themes'      => ['sannsynlighet', 'tall'],
             'description' => 'Seksidet terning med nedsenkede prikker. Velg størrelse, hjørneradius og prikker, '
-                . 'og last ned STL-fila til 3D-printeren. PDF-en har etiketter med prikker eller tall i nøyaktig størrelse.',
+                . 'og legg terningen på byggeplaten til 3D-printeren (3MF). PDF-en har etiketter med prikker eller tall i nøyaktig størrelse.',
             'preview'     => 'assets/previews/terning.jpg',
             'template'    => 'dice.php',
             'script'      => 'js/pages/dice.js',

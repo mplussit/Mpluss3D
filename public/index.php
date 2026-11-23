@@ -17,7 +17,7 @@
 declare(strict_types=1);
 
 header('X-Content-Type-Options: nosniff');
-$v = '21';   // øk for å tvinge ny CSS/JS i nettleseren
+$v = '22';   // øk for å tvinge ny CSS/JS i nettleseren
 
 $site = require __DIR__ . '/../app/config/pages.php';
 $slug = $_GET['side'] ?? null;
@@ -98,7 +98,7 @@ if ($page && $helpHref !== '') {
     <span class="menu-brand"><img src="assets/mplus-logo.svg" alt="M+" width="43" height="32"> <span class="brand">M+ <span class="brand-3d">3D</span></span></span>
     <h1>Velg modell</h1>
 <?php endif; ?>
-    <a class="help-btn" href="<?= $e($helpHref) ?>" target="_blank" rel="noopener" title="Slik bruker du STL- og PDF-filene (åpnes i ny fane)">
+    <a class="help-btn" href="<?= $e($helpHref) ?>" target="_blank" rel="noopener" title="Slik bruker du M+ 3D, 3MF- og PDF-filene (åpnes i ny fane)">
         <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><circle cx="9" cy="9" r="7.6" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M6.9 7.1a2.2 2.2 0 1 1 3 2c-.6.3-.9.7-.9 1.3v.4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="9" cy="13.2" r="1" fill="currentColor"/></svg>
         Hjelp
     </a>

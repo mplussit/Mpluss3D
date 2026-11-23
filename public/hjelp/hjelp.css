@@ -1,0 +1,145 @@
+/* M+ 3D – hjelpesiden. Samme farger og skrifter som appen (css/app.css). */
+:root {
+    --bg: #f3efe7;
+    --paper: #fffdf9;
+    --ink: #161616;
+    --ink-2: #5d5a55;
+    --line: #d9d2c4;
+    --orange: #f36d21;
+    --orange-ink: #a33f0e;
+    --blue: #2e6db4;
+    --focus: #2450c8;
+    --font-display: "Bricolage Grotesque", "Figtree", system-ui, sans-serif;
+    --font-body: "Figtree", system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 76px; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 17px/1.6 var(--font-body); }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+a { color: var(--orange-ink); text-decoration-thickness: 1px; text-underline-offset: 3px; }
+h1, h2, h3 { font-family: var(--font-display); line-height: 1.2; }
+
+/* ---------------------------------------------------------------- Toppfelt */
+.help-top {
+    position: sticky; top: 0; z-index: 5;
+    display: flex; align-items: center; gap: 16px;
+    padding: 10px max(16px, calc((100vw - 1180px) / 2));
+    background: var(--paper); box-shadow: 0 1px 0 var(--line);
+}
+.help-brand { display: inline-flex; align-items: center; gap: 10px; color: var(--ink); text-decoration: none;
+    font: 700 20px var(--font-display); }
+.help-brand img { height: 32px; width: auto; }
+.help-brand b { color: var(--orange-ink); }
+.help-top-title { font: 600 18px var(--font-display); color: var(--ink-2); }
+.back-btn {
+    margin-left: auto; display: inline-flex; align-items: center; min-height: 36px; padding: 0 16px;
+    border: 1px solid var(--line); border-radius: 999px; background: var(--paper); color: var(--ink);
+    font: 600 14px var(--font-body); text-decoration: none; white-space: nowrap;
+}
+.back-btn:hover { border-color: var(--ink); }
+
+/* ---------------------------------------------------------------- Oppsett */
+.help-wrap { display: grid; grid-template-columns: 230px minmax(0, 1fr); gap: 40px; max-width: 1180px; margin: 0 auto; padding: 32px 16px 60px; }
+.toc { position: sticky; top: 84px; align-self: start; font-size: 15px; }
+.toc-head { margin: 0 0 6px; font: 700 13px var(--font-body); letter-spacing: .06em; text-transform: uppercase; color: var(--orange-ink); }
+.toc ol { margin: 0; padding-left: 20px; }
+.toc li { margin: 4px 0; }
+.toc a { color: var(--ink); text-decoration: none; }
+.toc a:hover { color: var(--orange-ink); text-decoration: underline; }
+.help-main { min-width: 0; max-width: 860px; }
+.help-main h1 { margin: 0 0 10px; font-size: 38px; }
+.lead { font-size: 19px; color: var(--ink-2); margin-top: 0; }
+section { padding-top: 26px; margin-top: 26px; border-top: 1px solid var(--line); }
+section:first-of-type { border-top: 0; }
+section h2 { margin: 0 0 12px; font-size: 28px; }
+section h3 { margin: 24px 0 8px; font-size: 20px; }
+p { margin: 0 0 12px; }
+ul { padding-left: 22px; }
+li { margin: 4px 0; }
+
+/* ---------------------------------------------------------------- Kort og flyt */
+.cards { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.card { padding: 18px 20px; background: var(--paper); border-radius: 4px; border-top: 4px solid var(--orange);
+    box-shadow: 0 1px 2px rgba(22, 22, 22, .06), 0 6px 18px rgba(22, 22, 22, .05); }
+.card-pdf { border-top-color: var(--blue); }
+.card h3 { margin: 4px 0 8px; }
+.card-icon { margin: 0; }
+.card-icon svg { width: 34px; height: 28px; color: var(--orange-ink); }
+.card-pdf .card-icon svg { color: var(--blue); }
+.card-btn { margin: 0; font-size: 15px; color: var(--ink-2); }
+.flow { margin: 22px 0 0; }
+.flow svg { display: block; width: 100%; height: auto; }
+
+.kbd {
+    display: inline-block; padding: 0 8px; border: 1px solid var(--line); border-radius: 999px;
+    background: var(--paper); font: 600 14px/1.6 var(--font-body); white-space: nowrap;
+}
+.tip { padding: 12px 16px; background: var(--paper); border-left: 4px solid var(--orange); border-radius: 2px; }
+.warn-box { padding: 14px 18px; background: #fdecea; border-left: 4px solid #c81e1e; border-radius: 2px; margin-bottom: 14px; }
+.warn-box p:last-child { margin-bottom: 0; }
+
+/* ---------------------------------------------------------------- Skjermbilder med nummer */
+.shot { position: relative; margin: 14px 0 12px; }
+.shot img { display: block; width: 100%; height: auto; border-radius: 4px;
+    box-shadow: 0 1px 2px rgba(22, 22, 22, .08), 0 8px 24px rgba(22, 22, 22, .10); background: var(--paper); }
+.shot.small { max-width: 520px; }
+.shot.narrow { max-width: 480px; }
+.shot.tiny { max-width: 360px; }
+.pin {
+    position: absolute; z-index: 2; display: none; place-items: center;
+    width: 30px; height: 30px; border-radius: 50%;
+    background: var(--orange); color: var(--ink); border: 2px solid var(--paper);
+    font: 800 15px var(--font-display); box-shadow: 0 2px 6px rgba(22, 22, 22, .35);
+}
+.pin.placed { display: grid; }
+.pin-top { transform: translate(-50%, -70%); }
+.pin-left { transform: translate(-115%, -50%); }
+.pin-right { transform: translate(-30%, -50%); }
+.pin-box { position: absolute; border: 3px solid var(--orange); border-radius: 4px; pointer-events: none; }
+.legend { padding-left: 0; list-style: none; counter-reset: n; }
+.legend > li { position: relative; padding-left: 40px; margin: 8px 0; counter-increment: n; }
+.legend > li::before {
+    content: counter(n); position: absolute; left: 0; top: 0;
+    display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%;
+    background: var(--orange); font: 800 14px var(--font-display);
+}
+
+/* ---------------------------------------------------------------- Steg */
+.steps { padding-left: 0; list-style: none; counter-reset: s; }
+.steps > li { position: relative; padding-left: 52px; margin: 0 0 18px; counter-increment: s; }
+.steps > li::before {
+    content: counter(s); position: absolute; left: 0; top: 0;
+    display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%;
+    background: var(--ink); color: var(--paper); font: 800 17px var(--font-display);
+}
+.steps > li > h3 { margin: 4px 0 6px; }
+
+/* ---------------------------------------------------------------- Modellene */
+.model { padding: 16px 20px; margin: 14px 0; background: var(--paper); border-radius: 4px; }
+.model h3 { margin-top: 0; }
+.model > :last-child { margin-bottom: 0; }
+.model:target { outline: 3px solid var(--orange); outline-offset: 2px; }
+
+/* ---------------------------------------------------------------- Ord og spørsmål */
+.words { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 24px; margin: 0; }
+.words div { padding: 10px 0; border-bottom: 1px solid var(--line); }
+.words dt { font-weight: 700; }
+.words dd { margin: 2px 0 0; color: var(--ink-2); }
+details { padding: 12px 0; border-bottom: 1px solid var(--line); }
+summary { cursor: pointer; font-weight: 700; }
+details p { margin: 8px 0 0; }
+.help-foot { margin-top: 40px; }
+
+@media (max-width: 860px) {
+    .help-wrap { grid-template-columns: 1fr; gap: 10px; padding-top: 20px; }
+    .toc { position: static; }
+    .help-main h1 { font-size: 30px; }
+    .cards, .words { grid-template-columns: 1fr; }
+    .pin { width: 24px; height: 24px; font-size: 12px; }
+    .help-top-title { display: none; }
+}
+@media print {
+    .help-top, .toc, .help-foot { display: none; }
+    .help-wrap { display: block; padding: 0; }
+    details { border: 0; }
+}
