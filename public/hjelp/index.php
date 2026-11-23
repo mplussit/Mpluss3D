@@ -10,6 +10,10 @@
 declare(strict_types=1);
 header('X-Content-Type-Options: nosniff');
 $v = '1';
+// Avsnitt om sider som ikke er publisert i dette miljøet (utkast), vises ikke.
+$site = require __DIR__ . '/../../app/config/pages.php';
+$site = published_pages($site);
+$shown = static fn(string $slug): bool => isset($site['pages'][$slug]);
 ?>
 <!doctype html>
 <html lang="nb">
@@ -288,7 +292,7 @@ $v = '1';
     <h2>Skriv ut i riktig størrelse</h2>
     <div class="warn-box">
         <p><strong>Velg «Faktisk størrelse» eller «100 %» når du skriver ut.</strong> Ikke velg «Tilpass til siden».</p>
-        <p>Mange ark skal passe nøyaktig til figurene: utbrettingsfigurer, etiketter, arbeidsflater, hullark og
+        <p>Mange ark skal passe nøyaktig til figurene: utbrettingsfigurer, etiketter, arbeidsflater<?= $shown('kulespill') ? ', hullark' : '' ?> og
             arbeidsark. Blir arket forminsket, passer ikke figurene lenger.</p>
     </div>
     <p>Ark i nøyaktig størrelse har en <strong>kontrollinje</strong> med lengden skrevet ved siden av (for eksempel 50 mm eller
@@ -346,6 +350,7 @@ $v = '1';
         <ul><li>Print én liten ramme først og prøv med ekte klosser. Er det for trangt, øker du klaringen.</li></ul>
     </article>
 
+<?php if ($shown('kulespill')): ?>
     <article id="kulespill" class="model">
         <h3>Kulespill</h3>
         <p>Tre kulespill, A, B og C, og en bunn. Et ark legges mellom bunnen og spillet og syns gjennom hullene. Velg tall,
@@ -354,6 +359,7 @@ $v = '1';
                 en byggeplate på minst 256 mm. Lag én 3MF-fil for spillet og én for bunnen.</li>
             <li>Hullarket skal skrives ut i 100 %, ellers står ikke tallene midt i hullene.</li></ul>
     </article>
+<?php endif; ?>
 </section>
 
 <!-- ------------------------------------------------------------------ Ord -->

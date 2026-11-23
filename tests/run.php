@@ -571,6 +571,19 @@ test('terningens felles grensesnitt: én del, samme fil og antall 1', function (
     eq('mplus-terning-30mm-dekor.pdf', $model->pdfFilename($p));
 });
 
+test('utkast (draft) vises bare med M3D_SHOW_DRAFTS=1', function () {
+    $site = require __DIR__ . '/../app/config/pages.php';
+    $old = getenv('M3D_SHOW_DRAFTS');
+    putenv('M3D_SHOW_DRAFTS');
+    $prod = published_pages($site);
+    putenv('M3D_SHOW_DRAFTS=1');
+    $test = published_pages($site);
+    $old === false ? putenv('M3D_SHOW_DRAFTS') : putenv("M3D_SHOW_DRAFTS=$old");
+    ok(!isset($prod['pages']['kulespill']), 'kulespill skal ikke vises i produksjon');
+    ok(isset($prod['pages']['regnmedlego']));
+    ok(isset($test['pages']['kulespill']), 'kulespill skal vises på test');
+});
+
 test('sidene i menyen peker på registrerte modeller og maler', function () use ($registry) {
     $site = require __DIR__ . '/../app/config/pages.php';
     foreach ($site['pages'] as $slug => $page) {

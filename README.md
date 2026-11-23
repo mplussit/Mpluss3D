@@ -1198,6 +1198,7 @@ M+ 3D kjører som to Docker Swarm-stakker på samme server som M+. HAProxy sende
 
 * `docker/Dockerfile` lager bildet `mplus3d/php-fpm:1`: PHP 8.2-FPM med `gd` og `zip`, Composer og OpenSCAD (AppImage, låst versjon kontrollert mot SHA256, Manifold).
 * `docker-compose.yml` har nginx, php-fpm (maks 4 CPU og 4 GB) og `cleanup`, som kjører `bin/cleanup.php` hvert kvarter. Koden monteres inn fra git-klonen, så `git pull` oppdaterer appen direkte.
+* Sider som ikke er ferdige, har `'draft' => true` i `app/config/pages.php` (i dag Kulespill). De vises bare når `M3D_SHOW_DRAFTS=1`, som `deploy.sh test` setter. I produksjon er de borte fra menyen og hjelpesiden, og adressen gir 404. Når siden er ferdig, fjernes linjen, og siden legges inn i `o_pages` i M+ (`docs/mpluss3d-o_pages.sql` i M+-repoet).
 * Hvert miljø har sin egen klone på serveren, for eksempel `~/mplus3d` (greinen `main`) og `~/mplus3d-test` (greinen `test`). Oppdatering: `docker/deploy.sh prod` eller `docker/deploy.sh test` fra klonen. Skriptet kjører `git pull`, bygger bildet hvis det mangler, installerer avhengigheter, gir PHP skrivetilgang til `storage/` og ruller ut stakken.
 * Ny OpenSCAD-versjon: endre `OPENSCAD_VERSION` og `OPENSCAD_SHA256` i `docker/Dockerfile`, øk taggen (`:2`) der og i `docker-compose.yml` og `deploy.sh`, og kjør `deploy.sh` på nytt.
 * Teste lokalt: `MPLUS3D_PORT=8095 MPLUS_RETURN_HOSTS=localhost docker compose -p mplus3d-local up -d` (etter `docker build -t mplus3d/php-fpm:1 docker`), og åpne <http://127.0.0.1:8095>. Stopp med `docker compose -p mplus3d-local down`.

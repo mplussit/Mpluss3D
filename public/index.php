@@ -12,7 +12,8 @@
  *   index.php?side=kulespill    Kulespill med ark (hullark, verdiark, oppgaver)
  *
  * Sidene er definert i app/config/pages.php. Bare sider som står der,
- * kan vises (side-parameteren brukes aldri som filsti).
+ * kan vises (side-parameteren brukes aldri som filsti). Utkast ('draft') vises
+ * bare når M3D_SHOW_DRAFTS=1.
  */
 declare(strict_types=1);
 
@@ -20,6 +21,7 @@ header('X-Content-Type-Options: nosniff');
 $v = '22';   // øk for å tvinge ny CSS/JS i nettleseren
 
 $site = require __DIR__ . '/../app/config/pages.php';
+$site = published_pages($site);
 $slug = $_GET['side'] ?? null;
 $page = is_string($slug) && isset($site['pages'][$slug]) ? $site['pages'][$slug] : null;
 if ($slug !== null && $page === null) {

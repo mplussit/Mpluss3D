@@ -12,8 +12,8 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 case "${1:-}" in
-  prod) STACK=mplus3d;      PORT=8085; HOSTS=app.mpluss.no ;;
-  test) STACK=mplus3d-test; PORT=8086; HOSTS=apptest.mpluss.no,test.mpluss.no ;;
+  prod) STACK=mplus3d;      PORT=8085; HOSTS=app.mpluss.no;                        DRAFTS=0 ;;
+  test) STACK=mplus3d-test; PORT=8086; HOSTS=apptest.mpluss.no,test.mpluss.no; DRAFTS=1 ;;
   *) echo "Bruk: $0 prod|test"; exit 1 ;;
 esac
 
@@ -36,7 +36,7 @@ mkdir -p storage
 docker run --rm -v "$PWD/storage":/s "$IMAGE" chown -R www-data:www-data /s
 
 echo "== Ruller ut stakken $STACK på port $PORT"
-MPLUS3D_PORT=$PORT MPLUS_RETURN_HOSTS=$HOSTS docker stack deploy -c docker-compose.yml "$STACK"
+MPLUS3D_PORT=$PORT MPLUS_RETURN_HOSTS=$HOSTS M3D_SHOW_DRAFTS=$DRAFTS docker stack deploy -c docker-compose.yml "$STACK"
 
 echo "== Ferdig. Status:"
 docker stack services "$STACK"

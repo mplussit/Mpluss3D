@@ -30,6 +30,8 @@ services:
     environment:
       # M+-adressene som kan stå i ?tilbake= (se mplus_return_hosts i app/config/config.php)
       MPLUS_RETURN_HOSTS: ${MPLUS_RETURN_HOSTS:-app.mpluss.no}
+      # 1 = vis sider som ikke er ferdige ('draft' i app/config/pages.php). Bare i testmiljøet.
+      M3D_SHOW_DRAFTS: ${M3D_SHOW_DRAFTS:-0}
     deploy:
       mode: replicated
       replicas: 1

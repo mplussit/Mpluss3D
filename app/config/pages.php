@@ -6,9 +6,25 @@
  * (sortert på tittel), og kan filtreres på tema. Et klikk viser tittel,
  * forhåndsbilde og beskrivelse. Dobbeltklikk, Enter eller klikk på bildet
  * åpner siden. Hver side hører til én modell i app/config/models.php.
+ *
+ * En side med 'draft' => true er ikke ferdig. Den vises bare når miljøvariabelen
+ * M3D_SHOW_DRAFTS er 1 (testmiljøet, se docker/deploy.sh), ellers verken i menyen,
+ * på hjelpesiden eller som side (404). Bruk published_pages() for å få sidene.
  */
 
 declare(strict_types=1);
+
+if (!function_exists('published_pages')) {
+    /** Sidene som skal vises i dette miljøet (uten utkast i produksjon). */
+    function published_pages(array $site): array
+    {
+        if (getenv('M3D_SHOW_DRAFTS') === '1') {
+            return $site;
+        }
+        $site['pages'] = array_filter($site['pages'], static fn(array $p): bool => empty($p['draft']));
+        return $site;
+    }
+}
 
 return [
     'groups' => [
@@ -101,6 +117,8 @@ return [
             'script'      => 'js/pages/lego.js',
         ],
         'kulespill' => [
+            // Ikke ferdig: vises bare der M3D_SHOW_DRAFTS=1 (testmiljøet), ikke i produksjon.
+            'draft'       => true,
             'model'       => 'marble',
             'title'       => 'Kulespill',
             'h1'          => 'Kulespill med ark',
