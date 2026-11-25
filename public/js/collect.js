@@ -16,6 +16,8 @@
  * (ikke valgt) for sidene som har fasit. Fasitsidene kommer etter oppgavene i PDF-en.
  */
 
+import { currentSide, sendForSider } from './stats.js';
+
 const PDF_LIB = 'pdf-lib';
 const DB_NAME = 'mplus3d';
 const STORE = 'oppsamling';
@@ -163,12 +165,13 @@ export function initCollect(source) {
     q('#pdf-make').addEventListener('click', () => run(async () => {
         const { bytes } = await extract(selectedPages());
         save(await finish([bytes]), fileName());
+        sendForSider([currentSide()], 'pdf');
     }));
 
     q('#pdf-add').addEventListener('click', () => run(async () => {
         const sel = selectedPages();
         const { bytes, titles } = await extract(sel);
-        await store.add({ model: modelName(), titles, bytes, added: Date.now() });
+        await store.add({ model: modelName(), side: currentSide(), titles, bytes, added: Date.now() });
         feedback.textContent = sel.length === 1 ? 'Lagt til 1 side.' : `Lagt til ${sel.length} sider.`;
         await renderCollected();
     }));
@@ -204,6 +207,8 @@ export function initCollect(source) {
         const items = await store.all();
         if (!items.length) return;
         save(await finish(items.map((it) => it.bytes)), fileName());
+        // Statistikk: én «pdf» per modell som har sider i oppsamlings-PDF-en.
+        sendForSider(items.map((it) => it.side || currentSide()), 'pdf');
         await store.clear();
         await renderCollected();
         dialog.close();

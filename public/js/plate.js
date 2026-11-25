@@ -16,6 +16,8 @@
  *   initPlate(() => [{ filename, stl_url, count, label? }, …]);
  */
 
+import { currentSide, sendForSider } from './stats.js';
+
 const DB_NAME = 'mplus3d-byggeplate';
 const STORE = 'objekter';
 const PRINTER_KEY = 'mplus3d.plate.printer';
@@ -265,7 +267,7 @@ export function initPlate(parts) {
             const mesh = parseStl(bytes);
             if (!mesh.count) throw new Error('STL-filen er tom.');
             await store.put({
-                model: modelName(), label: partLabel(part), filename: part.filename,
+                model: modelName(), side: currentSide(), label: partLabel(part), filename: part.filename,
                 bytes, crc, size: mesh.size, count, rot: 0, added: Date.now(),
             });
         }
@@ -374,6 +376,9 @@ export function initPlate(parts) {
             && !confirm(`${total - layout.placed.length} av ${total} objekter får ikke plass på platen og blir ikke med i filen. Vil du lagre likevel?`)) return;
         const bytes = await write3mf(items, layout, filename.value.trim() || 'M+ 3D');
         save(bytes, fileName());
+        // Statistikk: én «fil» per modell som har objekter i filen.
+        sendForSider(items.filter((it) => layout.placed.some((p) => p.id === it.id))
+            .map((it) => it.side || currentSide()), 'fil');
         feedback.textContent = '';
     }));
 

@@ -18,7 +18,7 @@
 declare(strict_types=1);
 
 header('X-Content-Type-Options: nosniff');
-$v = '22';   // øk for å tvinge ny CSS/JS i nettleseren
+$v = '23';   // øk for å tvinge ny CSS/JS i nettleseren
 
 $site = require __DIR__ . '/../app/config/pages.php';
 $site = published_pages($site);
@@ -78,7 +78,7 @@ if ($page && $helpHref !== '') {
     </script>
 <?php endif; ?>
 </head>
-<body data-page="<?= $e($page ? (string) $slug : 'meny') ?>">
+<body data-page="<?= $e($page ? (string) $slug : 'meny') ?>"<?= $mplusBack ? ' data-mplus-tilbake="1"' : '' ?>>
 <div id="app-frame" class="app-frame">
 <script src="js/appscale.js?v=<?= $v ?>"></script>
 <header class="topbar">
