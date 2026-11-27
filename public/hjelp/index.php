@@ -246,8 +246,11 @@ $shown = static fn(string $slug): bool => isset($site['pages'][$slug]);
             <p>Start sliceren. Velg <em>Fil → Importer</em> (eller <em>Åpne</em>) og velg 3MF-filen i Nedlastinger. Du kan
                 også dra filen inn i vinduet.</p></li>
         <li><h3>Svar på spørsmålet om filen</h3>
-            <p>Noen slicere, for eksempel Bambu Studio, kan si at filen ikke er laget i det samme programmet, og at bare
-                figurene lastes inn. Det er riktig – trykk <em>OK</em>. Figurene ligger der M+ 3D plasserte dem.</p></li>
+            <p>Noen slicere kan si at filen ikke er laget i det samme programmet, og at bare figurene lastes inn. Bambu
+                Studio skriver for eksempel <em>«The 3mf file has invalid config, load geometry data only»</em> eller
+                <em>«The 3mf is not from Bambu Lab, load geometry data only»</em>. Meldingen er ufarlig: 3MF-filen fra
+                M+ 3D inneholder bare figurene, ingen printerinnstillinger. Trykk <em>OK</em>. Figurene ligger der M+ 3D
+                plasserte dem, og sliceren bruker printeren og filamentet som er valgt i programmet.</p></li>
         <li><h3>Velg printer og filament</h3>
             <p>Sjekk at riktig printer og filament (for eksempel PLA) er valgt. Standardinnstillingene passer for alle
                 modellene i M+ 3D.</p></li>
